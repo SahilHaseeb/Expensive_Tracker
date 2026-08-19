@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+{% block title %}Smart Expense Tracker - Home{% endblock %}
+
+{% block content %}
+<div class="landing-page">
+    <!-- Hero Section -->
+    <div class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <i class="fas fa-star"></i> AI-Powered Expense Tracking
+            </div>
+            <h1>Track Your Expenses<br><span>With Machine Learning</span></h1>
+            <p>Smart expense tracker that predicts your future spending using AI. Take control of your finances today!</p>
+            <div class="hero-buttons">
+                <a href="{{ url_for('auth.register') }}" class="btn-primary">
+                    <i class="fas fa-rocket"></i> Get Started Free
+                </a>
+                <a href="{{ url_for('auth.login') }}" class="btn-secondary">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </a>
+            </div>
+        </div>
+        <div class="hero-image floating">
+            <div class="hero-card glass">
+                <div class="mini-chart">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Monthly Prediction</span>
+                    <h3>₹24,500</h3>
+                </div>
+                <div class="mini-chart">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Categories Tracked</span>
+                    <h3>8+</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="features">
+        <h2>Why Choose Our Tracker?</h2>
+        <div class="features-grid">
+            <div class="feature-card glass card-hover">
+                <div class="feature-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <h3>ML Predictions</h3>
+                <p>AI predicts your next month's expenses based on spending patterns</p>
+            </div>
+            
+            <div class="feature-card glass card-hover">
+                <div class="feature-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+                    <i class="fas fa-chart-pie"></i>
+                </div>
+                <h3>Visual Analytics</h3>
+                <p>Beautiful charts and graphs to understand your spending habits</p>
+            </div>
+            
+            <div class="feature-card glass card-hover">
+                <div class="feature-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h3>Secure & Private</h3>
+                <p>Your financial data is encrypted and stored securely</p>
+            </div>
+            
+            <div class="feature-card glass card-hover">
+                <div class="feature-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7);">
+                    <i class="fas fa-download"></i>
+                </div>
+                <h3>Export Reports</h3>
+                <p>Download your expense reports in CSV format anytime</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Counter -->
+    <div class="stats-section glass">
+        <div class="stat-item">
+            <h2>50K+</h2>
+            <p>Active Users</p>
+        </div>
+        <div class="stat-item">
+            <h2>1M+</h2>
+            <p>Expenses Tracked</p>
+        </div>
+        <div class="stat-item">
+            <h2>99.9%</h2>
+            <p>Accuracy Rate</p>
+        </div>
+        <div class="stat-item">
+            <h2>24/7</h2>
+            <p>Support</p>
+        </div>
+    </div>
+
+    <!-- CTA Section -->
+    <div class="cta-section">
+        <h2>Ready to Take Control?</h2>
+        <p>Join thousands of users who are managing their finances smarter</p>
+        <a href="{{ url_for('auth.register') }}" class="btn-primary glow">
+            <i class="fas fa-arrow-right"></i> Start Free Trial
+        </a>
+    </div>
+</div>
+
+<style>
+/* Landing Page Specific Styles */
+.landing-page {
+    min-height: 100vh;
+}
+
+.hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 80px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+    gap: 40px;
+}
+
+.hero-content {
+    flex: 1;
+}
+
+.hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: 50px;
+    color: var(--primary);
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+
+.hero h1 {
+    font-size: 48px;
+    margin-bottom: 20px;
+    line-height: 1.2;
+}
+
+.hero h1 span {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hero p {
+    font-size: 18px;
+    color: var(--text-light);
+    margin-bottom: 30px;
+    line-height: 1.6;
+}
+
+.hero-buttons {
+    display: flex;
+    gap: 15px;
+}
+
+.btn-secondary {
+    padding: 18px 30px;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    border: 2px solid var(--border);
+    border-radius: 15px;
+    color: var(--text);
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: var(--transition);
+}
+
+.btn-secondary:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+}
+
+.hero-image {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+}
+
+.hero-card {
+    padding: 40px;
+    border-radius: 30px;
+    display: grid;
+    gap: 20px;
+}
+
+.mini-chart {
+    padding: 20px;
+    background: var(--bg);
+    border-radius: 15px;
+    text-align: center;
+}
+
+.mini-chart i {
+    font-size: 30px;
+    color: var(--primary);
+    margin-bottom: 10px;
+}
+
+.features {
+    padding: 80px 40px;
+    text-align: center;
+    background: var(--bg);
+}
+
+.features h2 {
+    font-size: 36px;
+    margin-bottom: 50px;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.feature-card {
+    padding: 40px 30px;
+    border-radius: 20px;
+    text-align: center;
+}
+
+.feature-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 28px;
+    margin: 0 auto 20px;
+}
+
+.feature-card h3 {
+    margin-bottom: 15px;
+}
+
+.stats-section {
+    max-width: 1000px;
+    margin: 60px auto;
+    padding: 40px;
+    border-radius: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 30px;
+    text-align: center;
+}
+
+.stat-item h2 {
+    font-size: 36px;
+    color: var(--primary);
+}
+
+.cta-section {
+    text-align: center;
+    padding: 80px 40px;
+}
+
+.cta-section h2 {
+    font-size: 36px;
+    margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+    .hero {
+        flex-direction: column;
+        text-align: center;
+        padding: 40px 20px;
+    }
+    
+    .hero h1 {
+        font-size: 32px;
+    }
+    
+    .hero-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .features-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
