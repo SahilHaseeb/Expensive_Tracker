@@ -2,29 +2,29 @@
 {% block title %}Dashboard - Smart Expense Tracker{% endblock %}
 
 {% block content %}
-<div class="dashboard">
-    <!-- Welcome Section -->
+<div class="dashboard animate-fade-up">
+    <!-- Welcome Header -->
     <div class="welcome-section">
         <div>
-            <h1>Dashboard</h1>
-            <p>Welcome back, {{ current_user.username }}! Here's your expense summary.</p>
+            <h1>Financial Dashboard</h1>
+            <p>Welcome back, <strong>{{ current_user.username }}</strong>! Here is your spending overview.</p>
         </div>
         {% if predicted %}
-        <div class="prediction-badge pulse">
-            <i class="fas fa-robot"></i>
+        <div class="prediction-badge animate-pulse-glow">
+            <i class="fas fa-brain"></i>
             <div>
-                <small>ML Prediction</small>
+                <small>AI Prediction</small>
                 <strong>₹{{ predicted }}</strong>
-                <span>Next Month</span>
+                <span>Estimated Next Month</span>
             </div>
         </div>
         {% endif %}
     </div>
 
-    <!-- Stats Cards -->
+    <!-- 4 Key Stat Metric Cards -->
     <div class="stats-grid">
-        <div class="stat-card glass">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+        <div class="stat-card glass card-hover delay-1">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #6366F1, #8B5CF6);">
                 <i class="fas fa-wallet"></i>
             </div>
             <div class="stat-info">
@@ -33,32 +33,32 @@
             </div>
         </div>
         
-        <div class="stat-card glass">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+        <div class="stat-card glass card-hover delay-2">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #EC4899, #F43F5E);">
                 <i class="fas fa-receipt"></i>
             </div>
             <div class="stat-info">
-                <small>Transactions</small>
+                <small>Monthly Transactions</small>
                 <h2>{{ transaction_count }}</h2>
             </div>
         </div>
         
-        <div class="stat-card glass">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
+        <div class="stat-card glass card-hover delay-3">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #3B82F6, #06B6D4);">
                 <i class="fas fa-chart-line"></i>
             </div>
             <div class="stat-info">
-                <small>Avg Transaction</small>
+                <small>Average Spend</small>
                 <h2>₹{{ avg_transaction }}</h2>
             </div>
         </div>
         
-        <div class="stat-card glass">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7);">
+        <div class="stat-card glass card-hover delay-4">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #10B981, #14B8A6);">
                 <i class="fas fa-tags"></i>
             </div>
             <div class="stat-info">
-                <small>Categories Used</small>
+                <small>Categories Active</small>
                 <h2>{{ category_totals|length }}</h2>
             </div>
         </div>
@@ -67,30 +67,30 @@
     <!-- Charts Section -->
     <div class="charts-grid">
         {% if pie_chart_json %}
-        <div class="chart-card glass">
+        <div class="chart-card glass card-hover">
             <div class="chart-header">
-                <h3><i class="fas fa-chart-pie"></i> Category Breakdown</h3>
+                <h3><i class="fas fa-chart-pie"></i> Category Distribution</h3>
             </div>
             <div id="pie-chart" class="chart-container"></div>
         </div>
         {% endif %}
         
         {% if line_chart_json %}
-        <div class="chart-card glass">
+        <div class="chart-card glass card-hover">
             <div class="chart-header">
-                <h3><i class="fas fa-chart-line"></i> Monthly Trend</h3>
+                <h3><i class="fas fa-arrow-trend-up"></i> Spending Trend</h3>
             </div>
             <div id="line-chart" class="chart-container"></div>
         </div>
         {% endif %}
     </div>
 
-    <!-- Recent Transactions -->
-    <div class="table-card glass">
+    <!-- Recent Transactions Table Card -->
+    <div class="table-card glass card-hover">
         <div class="table-header">
-            <h3><i class="fas fa-history"></i> Recent Transactions</h3>
+            <h3><i class="fas fa-clock-rotate-left"></i> Recent Transactions</h3>
             <a href="{{ url_for('main.add_expense') }}" class="btn-add">
-                <i class="fas fa-plus"></i> Add New
+                <i class="fas fa-plus"></i> Add Expense
             </a>
         </div>
         <div class="table-responsive">
@@ -101,37 +101,45 @@
                         <th>Category</th>
                         <th>Amount</th>
                         <th>Note</th>
-                        <th>Actions</th>
+                        <th style="text-align: right;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for expense in expenses %}
-                    <tr class="fade-in-row">
-                        <td>{{ expense.date.strftime('%d %b %Y') }}</td>
+                    <tr class="animate-fade-up">
+                        <td><strong>{{ expense.date.strftime('%d %b %Y') }}</strong></td>
                         <td>
                             <span class="category-badge category-{{ expense.category | lower }}">
+                                {% if expense.category == 'Food' %}🍔
+                                {% elif expense.category == 'Transport' %}🚗
+                                {% elif expense.category == 'Rent' %}🏠
+                                {% elif expense.category == 'Entertainment' %}🎮
+                                {% elif expense.category == 'Shopping' %}🛍️
+                                {% elif expense.category == 'Healthcare' %}💊
+                                {% elif expense.category == 'Education' %}📚
+                                {% else %}📦{% endif %}
                                 {{ expense.category }}
                             </span>
                         </td>
                         <td class="amount">₹{{ expense.amount }}</td>
                         <td>{{ expense.note or '—' }}</td>
-                        <td>
-                            <a href="{{ url_for('main.edit_expense', id=expense.id) }}" class="btn-icon" title="Edit">
-                                <i class="fas fa-edit"></i>
+                        <td style="text-align: right;">
+                            <a href="{{ url_for('main.edit_expense', id=expense.id) }}" class="btn-icon" title="Edit Expense">
+                                <i class="fas fa-pen"></i>
                             </a>
                             <a href="{{ url_for('main.delete_expense', id=expense.id) }}" 
                                class="btn-icon delete" 
-                               onclick="return confirm('Delete this expense?')"
-                               title="Delete">
-                                <i class="fas fa-trash"></i>
+                               onclick="return confirm('Are you sure you want to delete this expense?')"
+                               title="Delete Expense">
+                                <i class="fas fa-trash-can"></i>
                             </a>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
                         <td colspan="5" class="empty-state">
-                            <i class="fas fa-inbox"></i>
-                            <p>No expenses added yet. <a href="{{ url_for('main.add_expense') }}">Add your first expense</a></p>
+                            <i class="fas fa-folder-open"></i>
+                            <p>No expenses found this month. <a href="{{ url_for('main.add_expense') }}">Record your first expense</a></p>
                         </td>
                     </tr>
                     {% endfor %}
@@ -143,18 +151,17 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<script src="{{ url_for('static', filename='js/dashboard-charts.js') }}"></script>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 {% if pie_chart_json %}
 <script>
     window.pieData = {{ pie_chart_json | safe }};
-    Plotly.newPlot('pie-chart', window.pieData.data, window.pieData.layout, {responsive: true});
+    Plotly.newPlot('pie-chart', window.pieData.data, window.pieData.layout, {responsive: true, displayModeBar: false});
 </script>
 {% endif %}
 {% if line_chart_json %}
 <script>
     window.lineData = {{ line_chart_json | safe }};
-    Plotly.newPlot('line-chart', window.lineData.data, window.lineData.layout, {responsive: true});
+    Plotly.newPlot('line-chart', window.lineData.data, window.lineData.layout, {responsive: true, displayModeBar: false});
 </script>
 {% endif %}
 {% endblock %}

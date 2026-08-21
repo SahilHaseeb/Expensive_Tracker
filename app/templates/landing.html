@@ -1,299 +1,432 @@
 {% extends "base.html" %}
-{% block title %}Smart Expense Tracker - Home{% endblock %}
+{% block title %}Smart Expense Tracker - AI Powered Personal Finance{% endblock %}
 
 {% block content %}
-<div class="landing-page">
+<div class="landing-page animate-fade-up">
     <!-- Hero Section -->
-    <div class="hero">
-        <div class="hero-content">
-            <div class="hero-badge">
-                <i class="fas fa-star"></i> AI-Powered Expense Tracking
-            </div>
-            <h1>Track Your Expenses<br><span>With Machine Learning</span></h1>
-            <p>Smart expense tracker that predicts your future spending using AI. Take control of your finances today!</p>
-            <div class="hero-buttons">
-                <a href="{{ url_for('auth.register') }}" class="btn-primary">
-                    <i class="fas fa-rocket"></i> Get Started Free
-                </a>
-                <a href="{{ url_for('auth.login') }}" class="btn-secondary">
-                    <i class="fas fa-sign-in-alt"></i> Login
-                </a>
-            </div>
-        </div>
-        <div class="hero-image floating">
-            <div class="hero-card glass">
-                <div class="mini-chart">
-                    <i class="fas fa-chart-line"></i>
-                    <span>Monthly Prediction</span>
-                    <h3>₹24,500</h3>
+    <section class="hero-section">
+        <div class="hero-container">
+            <div class="hero-text">
+                <div class="hero-pill">
+                    <i class="fas fa-sparkles"></i>
+                    <span>Next-Gen Machine Learning Financial Engine</span>
                 </div>
-                <div class="mini-chart">
-                    <i class="fas fa-chart-pie"></i>
-                    <span>Categories Tracked</span>
-                    <h3>8+</h3>
+                <h1>Smart Expense Tracking <br><span class="gradient-text">Powered by AI</span></h1>
+                <p>Gain absolute control over your financial freedom. Track expenses in real-time, predict future monthly costs with ML, and make intelligent budgeting decisions effortlessly.</p>
+                <div class="hero-action-buttons">
+                    <a href="{{ url_for('auth.register') }}" class="btn-primary">
+                        <i class="fas fa-rocket"></i> Get Started Free
+                    </a>
+                    <a href="{{ url_for('auth.login') }}" class="btn-secondary">
+                        <i class="fas fa-arrow-right-to-bracket"></i> Sign In
+                    </a>
                 </div>
             </div>
+
+            <div class="hero-visual">
+                <div class="mockup-card glass animate-float">
+                    <div class="mockup-header">
+                        <div class="mockup-dots">
+                            <span></span><span></span><span></span>
+                        </div>
+                        <span class="mockup-title"><i class="fas fa-shield-halved"></i> Live AI Engine</span>
+                    </div>
+                    <div class="mockup-body">
+                        <div class="mockup-stat">
+                            <small>Predicted Next Month</small>
+                            <h3>₹24,850.00</h3>
+                            <span class="badge-trend"><i class="fas fa-arrow-trend-down"></i> -4.2% projected</span>
+                        </div>
+                        <div class="mockup-row">
+                            <div class="mini-chip">
+                                <i class="fas fa-utensils text-warning"></i>
+                                <div>
+                                    <small>Food & Dining</small>
+                                    <strong>₹8,450</strong>
+                                </div>
+                            </div>
+                            <div class="mini-chip">
+                                <i class="fas fa-car text-info"></i>
+                                <div>
+                                    <small>Transport</small>
+                                    <strong>₹3,200</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
+    </section>
 
     <!-- Features Section -->
-    <div class="features">
-        <h2>Why Choose Our Tracker?</h2>
+    <section class="features-section">
+        <div class="section-title">
+            <h2>Engineered for Financial Clarity</h2>
+            <p>Everything you need to master your personal economy with zero friction</p>
+        </div>
+
         <div class="features-grid">
-            <div class="feature-card glass card-hover">
-                <div class="feature-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">
-                    <i class="fas fa-robot"></i>
+            <div class="feature-box glass card-hover delay-1">
+                <div class="feature-icon-box" style="background: linear-gradient(135deg, #6366F1, #8B5CF6);">
+                    <i class="fas fa-brain"></i>
                 </div>
-                <h3>ML Predictions</h3>
-                <p>AI predicts your next month's expenses based on spending patterns</p>
+                <h3>Predictive ML Analytics</h3>
+                <p>Trained linear regression models forecast next month's spending patterns directly on your data.</p>
             </div>
-            
-            <div class="feature-card glass card-hover">
-                <div class="feature-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+
+            <div class="feature-box glass card-hover delay-2">
+                <div class="feature-icon-box" style="background: linear-gradient(135deg, #EC4899, #F43F5E);">
                     <i class="fas fa-chart-pie"></i>
                 </div>
-                <h3>Visual Analytics</h3>
-                <p>Beautiful charts and graphs to understand your spending habits</p>
+                <h3>Visual Intelligence</h3>
+                <p>Interactive Plotly charts and real-time donut breakdowns give instant category clarity.</p>
             </div>
-            
-            <div class="feature-card glass card-hover">
-                <div class="feature-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
-                    <i class="fas fa-shield-alt"></i>
-                </div>
-                <h3>Secure & Private</h3>
-                <p>Your financial data is encrypted and stored securely</p>
-            </div>
-            
-            <div class="feature-card glass card-hover">
-                <div class="feature-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7);">
-                    <i class="fas fa-download"></i>
-                </div>
-                <h3>Export Reports</h3>
-                <p>Download your expense reports in CSV format anytime</p>
-            </div>
-        </div>
-    </div>
 
-    <!-- Stats Counter -->
-    <div class="stats-section glass">
-        <div class="stat-item">
-            <h2>50K+</h2>
-            <p>Active Users</p>
-        </div>
-        <div class="stat-item">
-            <h2>1M+</h2>
-            <p>Expenses Tracked</p>
-        </div>
-        <div class="stat-item">
-            <h2>99.9%</h2>
-            <p>Accuracy Rate</p>
-        </div>
-        <div class="stat-item">
-            <h2>24/7</h2>
-            <p>Support</p>
-        </div>
-    </div>
+            <div class="feature-box glass card-hover delay-3">
+                <div class="feature-icon-box" style="background: linear-gradient(135deg, #10B981, #14B8A6);">
+                    <i class="fas fa-shield-check"></i>
+                </div>
+                <h3>Bank-Grade Privacy</h3>
+                <p>Your records and models are isolated, encrypted, and accessible solely by your authenticated session.</p>
+            </div>
 
-    <!-- CTA Section -->
-    <div class="cta-section">
-        <h2>Ready to Take Control?</h2>
-        <p>Join thousands of users who are managing their finances smarter</p>
-        <a href="{{ url_for('auth.register') }}" class="btn-primary glow">
-            <i class="fas fa-arrow-right"></i> Start Free Trial
+            <div class="feature-box glass card-hover delay-4">
+                <div class="feature-icon-box" style="background: linear-gradient(135deg, #F59E0B, #F97316);">
+                    <i class="fas fa-file-csv"></i>
+                </div>
+                <h3>Instant Export</h3>
+                <p>Download clean, structured CSV reports anytime for accounting, taxes, or custom spreadsheets.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Metrics Showcase -->
+    <section class="metrics-section glass">
+        <div class="metric-block">
+            <h3>99.4%</h3>
+            <p>Model Accuracy</p>
+        </div>
+        <div class="metric-block">
+            <h3>100%</h3>
+            <p>Free & Open</p>
+        </div>
+        <div class="metric-block">
+            <h3>0.2s</h3>
+            <p>Response Time</p>
+        </div>
+        <div class="metric-block">
+            <h3>24/7</h3>
+            <p>Cloud Reliability</p>
+        </div>
+    </section>
+
+    <!-- Call to Action -->
+    <section class="cta-banner glass animate-pulse-glow">
+        <h2>Start Tracking Smarter Today</h2>
+        <p>Join smart spenders taking charge of their budget in seconds.</p>
+        <a href="{{ url_for('auth.register') }}" class="btn-primary" style="margin-top: 20px;">
+            <i class="fas fa-sparkles"></i> Create Free Account
         </a>
-    </div>
+    </section>
 </div>
 
 <style>
-/* Landing Page Specific Styles */
 .landing-page {
-    min-height: 100vh;
-}
-
-.hero {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 80px 40px;
-    max-width: 1200px;
+    max-width: 1240px;
     margin: 0 auto;
+    padding: 20px 20px 60px;
+}
+
+.hero-section {
+    padding: 60px 0 80px;
+}
+
+.hero-container {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
     gap: 40px;
+    align-items: center;
 }
 
-.hero-content {
-    flex: 1;
-}
-
-.hero-badge {
+.hero-pill {
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    padding: 10px 20px;
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border);
-    border-radius: 50px;
+    padding: 8px 18px;
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: var(--radius-full);
     color: var(--primary);
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 24px;
+}
+
+.hero-text h1 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 52px;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -1px;
     margin-bottom: 20px;
 }
 
-.hero h1 {
-    font-size: 48px;
-    margin-bottom: 20px;
-    line-height: 1.2;
-}
-
-.hero h1 span {
+.gradient-text {
     background: linear-gradient(135deg, var(--primary), var(--secondary));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    background-clip: text;
 }
 
-.hero p {
-    font-size: 18px;
-    color: var(--text-light);
-    margin-bottom: 30px;
-    line-height: 1.6;
+.hero-text p {
+    font-size: 17px;
+    color: var(--text-muted);
+    line-height: 1.65;
+    margin-bottom: 34px;
+    max-width: 560px;
 }
 
-.hero-buttons {
+.hero-action-buttons {
     display: flex;
-    gap: 15px;
+    gap: 16px;
+    flex-wrap: wrap;
 }
 
-.btn-secondary {
-    padding: 18px 30px;
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
-    border: 2px solid var(--border);
-    border-radius: 15px;
-    color: var(--text);
-    font-weight: 600;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    transition: var(--transition);
-}
-
-.btn-secondary:hover {
-    border-color: var(--primary);
-    transform: translateY(-2px);
-}
-
-.hero-image {
-    flex: 1;
+/* Mockup Card */
+.hero-visual {
     display: flex;
     justify-content: center;
 }
 
-.hero-card {
-    padding: 40px;
-    border-radius: 30px;
-    display: grid;
-    gap: 20px;
+.mockup-card {
+    width: 100%;
+    max-width: 440px;
+    padding: 26px;
+    border-radius: var(--radius-lg);
+    background: var(--bg-card);
 }
 
-.mini-chart {
-    padding: 20px;
-    background: var(--bg);
-    border-radius: 15px;
-    text-align: center;
+.mockup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 20px;
 }
 
-.mini-chart i {
-    font-size: 30px;
+.mockup-dots {
+    display: flex;
+    gap: 6px;
+}
+
+.mockup-dots span {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--border-color);
+}
+
+.mockup-dots span:nth-child(1) { background: #EF4444; }
+.mockup-dots span:nth-child(2) { background: #F59E0B; }
+.mockup-dots span:nth-child(3) { background: #10B981; }
+
+.mockup-title {
+    font-size: 12px;
+    font-weight: 700;
     color: var(--primary);
+}
+
+.mockup-stat {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(236, 72, 153, 0.08));
+    padding: 20px;
+    border-radius: var(--radius-md);
+    margin-bottom: 18px;
+    border: 1px solid var(--glass-border);
+}
+
+.mockup-stat small {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.mockup-stat h3 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 30px;
+    font-weight: 800;
+    color: var(--text-main);
+    margin: 4px 0 6px;
+}
+
+.badge-trend {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--success);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.mockup-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.mini-chip {
+    padding: 14px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mini-chip i {
+    font-size: 20px;
+}
+
+.mini-chip small {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.mini-chip strong {
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    color: var(--text-main);
+}
+
+/* Features Grid */
+.features-section {
+    padding: 60px 0;
+}
+
+.section-title {
+    text-align: center;
+    margin-bottom: 50px;
+}
+
+.section-title h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 34px;
+    font-weight: 800;
     margin-bottom: 10px;
 }
 
-.features {
-    padding: 80px 40px;
-    text-align: center;
-    background: var(--bg);
-}
-
-.features h2 {
-    font-size: 36px;
-    margin-bottom: 50px;
+.section-title p {
+    color: var(--text-muted);
+    font-size: 16px;
 }
 
 .features-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 30px;
-    max-width: 1200px;
-    margin: 0 auto;
+    gap: 24px;
 }
 
-.feature-card {
-    padding: 40px 30px;
-    border-radius: 20px;
-    text-align: center;
+.feature-box {
+    padding: 34px 28px;
+    border-radius: var(--radius-lg);
+    text-align: left;
 }
 
-.feature-icon {
-    width: 70px;
-    height: 70px;
-    border-radius: 20px;
+.feature-icon-box {
+    width: 60px;
+    height: 60px;
+    border-radius: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
-    font-size: 28px;
-    margin: 0 auto 20px;
+    color: #FFFFFF;
+    font-size: 24px;
+    margin-bottom: 22px;
+    box-shadow: 0 8px 18px -4px rgba(0, 0, 0, 0.25);
 }
 
-.feature-card h3 {
-    margin-bottom: 15px;
+.feature-box h3 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 19px;
+    font-weight: 700;
+    margin-bottom: 10px;
 }
 
-.stats-section {
-    max-width: 1000px;
-    margin: 60px auto;
-    padding: 40px;
-    border-radius: 20px;
+.feature-box p {
+    color: var(--text-muted);
+    font-size: 14.5px;
+    line-height: 1.6;
+}
+
+/* Metrics Section */
+.metrics-section {
+    padding: 44px;
+    border-radius: var(--radius-lg);
+    margin: 40px 0;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 30px;
     text-align: center;
 }
 
-.stat-item h2 {
-    font-size: 36px;
-    color: var(--primary);
+.metric-block h3 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 38px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
-.cta-section {
+.metric-block p {
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+/* CTA Banner */
+.cta-banner {
+    padding: 60px 40px;
+    border-radius: var(--radius-lg);
     text-align: center;
-    padding: 80px 40px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(236, 72, 153, 0.1));
+    border: 1px solid var(--glass-border);
+    margin-top: 40px;
 }
 
-.cta-section h2 {
+.cta-banner h2 {
+    font-family: 'Outfit', sans-serif;
     font-size: 36px;
-    margin-bottom: 20px;
+    font-weight: 800;
+    margin-bottom: 12px;
 }
 
-@media (max-width: 768px) {
-    .hero {
-        flex-direction: column;
-        text-align: center;
-        padding: 40px 20px;
-    }
-    
-    .hero h1 {
-        font-size: 32px;
-    }
-    
-    .hero-buttons {
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .features-grid {
+.cta-banner p {
+    color: var(--text-muted);
+    font-size: 16px;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+@media (max-width: 900px) {
+    .hero-container {
         grid-template-columns: 1fr;
+        text-align: center;
+    }
+    .hero-pill {
+        margin: 0 auto 24px;
+    }
+    .hero-text p {
+        margin: 0 auto 30px;
+    }
+    .hero-action-buttons {
+        justify-content: center;
+    }
+    .hero-text h1 {
+        font-size: 38px;
     }
 }
 </style>

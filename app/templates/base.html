@@ -3,30 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Smart Expense Tracker{% endblock %}</title>
+    <title>{% block title %}Smart Expense Tracker - AI Powered{% endblock %}</title>
     
     <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Main CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Google Fonts: Outfit & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheets -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/animations.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- Theme Toggle -->
-    <button class="theme-toggle" onclick="toggleTheme()">
+    <!-- Floating Dark/Light Mode Switcher -->
+    <button class="theme-toggle" id="themeToggleBtn" title="Toggle Dark/Light Mode (Ctrl+Shift+D)">
         <i class="fas fa-moon"></i>
         <i class="fas fa-sun"></i>
     </button>
 
-    <!-- Navigation -->
     {% if current_user.is_authenticated %}
+    <!-- Mobile Hamburger Toggle -->
+    <button class="mobile-nav-toggle" id="mobileNavToggle" title="Open Navigation Menu">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Modern Sidebar Navigation -->
     <nav class="sidebar">
         <div class="sidebar-logo">
-            <i class="fas fa-chart-pie"></i>
-            <span>ExpenseTracker</span>
+            <i class="fas fa-wallet"></i>
+            <span>ExpenseAI</span>
         </div>
         
         <div class="sidebar-user">
@@ -35,14 +44,14 @@
             </div>
             <div class="user-info">
                 <h4>{{ current_user.username }}</h4>
-                <p>Premium Member</p>
+                <p>Active Account</p>
             </div>
         </div>
 
         <ul class="sidebar-menu">
             <li>
                 <a href="{{ url_for('main.dashboard') }}" class="{% if request.endpoint == 'main.dashboard' %}active{% endif %}">
-                    <i class="fas fa-th-large"></i>
+                    <i class="fas fa-chart-pie"></i>
                     <span>Dashboard</span>
                 </a>
             </li>
@@ -54,7 +63,7 @@
             </li>
             <li>
                 <a href="{{ url_for('main.export_csv') }}">
-                    <i class="fas fa-download"></i>
+                    <i class="fas fa-file-export"></i>
                     <span>Export CSV</span>
                 </a>
             </li>
@@ -69,16 +78,16 @@
     </nav>
     {% endif %}
 
-    <!-- Main Content -->
+    <!-- Main Content Area -->
     <main class="{% if current_user.is_authenticated %}main-with-sidebar{% else %}main-full{% endif %}">
-        <!-- Flash Messages with Animation -->
+        <!-- Modern Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="flash-container">
                     {% for category, message in messages %}
-                        <div class="flash-message flash-{{ category }} animate__animated animate__fadeInDown">
-                            <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
-                            {{ message }}
+                        <div class="flash-message flash-{{ category }} animate-fade-up">
+                            <i class="fas fa-{% if category == 'success' %}check-circle text-success{% elif category == 'error' %}exclamation-circle text-danger{% else %}info-circle text-info{% endif %}"></i>
+                            <span>{{ message }}</span>
                             <button onclick="this.parentElement.remove()">&times;</button>
                         </div>
                     {% endfor %}
@@ -89,7 +98,7 @@
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Scripts -->
+    <!-- Master Scripts -->
     <script src="{{ url_for('static', filename='js/theme-toggle.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block extra_js %}{% endblock %}

@@ -2,47 +2,38 @@
 {% block title %}Login - Smart Expense Tracker{% endblock %}
 
 {% block content %}
-<div class="auth-container">
-    <div class="auth-card floating">
+<div class="auth-container animate-scale-in">
+    <div class="auth-card">
         <div class="auth-header">
             <i class="fas fa-wallet auth-icon"></i>
             <h1>Welcome Back</h1>
-            <p>Track your expenses smartly</p>
+            <p>Log in to manage and optimize your personal finances</p>
         </div>
         
         <form method="POST" class="auth-form">
             <div class="input-group">
-                <i class="fas fa-user"></i>
-                <input type="text" name="username" placeholder="Username" required autocomplete="off">
+                <i class="fas fa-user input-icon"></i>
+                <input type="text" name="username" placeholder="Username" required autocomplete="username" autofocus>
             </div>
             
             <div class="input-group">
-                <i class="fas fa-lock"></i>
-                <input type="password" name="password" placeholder="Password" required id="password">
+                <i class="fas fa-lock input-icon"></i>
+                <input type="password" name="password" placeholder="Password" required id="password" autocomplete="current-password">
                 <i class="fas fa-eye toggle-password" onclick="togglePassword()"></i>
             </div>
             
-            <div class="form-options">
-                <label class="checkbox-container">
-                    <input type="checkbox" name="remember">
-                    <span class="checkmark"></span>
-                    Remember me
-                </label>
-            </div>
-            
-            <button type="submit" class="btn-primary">
-                <i class="fas fa-sign-in-alt"></i> Login
+            <button type="submit" class="btn-primary" style="width: 100%; margin-top: 10px;">
+                <i class="fas fa-arrow-right-to-bracket"></i> Sign In
             </button>
         </form>
         
         <div class="auth-footer">
-            <p>Don't have an account? <a href="{{ url_for('auth.register') }}">Register here</a></p>
+            <p>Don't have an account? <a href="{{ url_for('auth.register') }}">Create an account</a></p>
         </div>
         
-        <!-- Floating shapes -->
+        <!-- Ambient Glowing Orbs -->
         <div class="shape shape-1"></div>
         <div class="shape shape-2"></div>
-        <div class="shape shape-3"></div>
     </div>
 </div>
 {% endblock %}
