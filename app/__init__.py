@@ -23,14 +23,20 @@ def create_app():
     with app.app_context():
         db.create_all()
 
-    # Blueprints import
+    # Blueprints registration
     from app.auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint)
 
     from app.routes import main as main_blueprint
     app.register_blueprint(main_blueprint)
 
+    from app.chatbot_routes import chatbot_bp
+    app.register_blueprint(chatbot_bp)
+
+    from app.shopping_routes import shopping_bp
+    app.register_blueprint(shopping_bp)
+
     return app
 
-# Expose 'app' directly so 'gunicorn app:app' and 'gunicorn run:app' both work flawlessly
+# Expose 'app' directly for gunicorn
 app = create_app()

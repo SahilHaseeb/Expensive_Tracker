@@ -62,6 +62,20 @@
                 </a>
             </li>
             <li>
+                <a href="{{ url_for('chatbot.index') }}" class="{% if request.endpoint and request.endpoint.startswith('chatbot.') %}active{% endif %}">
+                    <i class="fas fa-brain"></i>
+                    <span>AI Advisor</span>
+                    <span class="menu-badge" style="background: linear-gradient(135deg, #8B5CF6, #EC4899);">AI</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('shopping.index') }}" class="{% if request.endpoint and request.endpoint.startswith('shopping.') %}active{% endif %}">
+                    <i class="fas fa-bag-shopping"></i>
+                    <span>Price Finder</span>
+                    <span class="menu-badge" style="background: linear-gradient(135deg, #10B981, #3B82F6);">DEALS</span>
+                </a>
+            </li>
+            <li>
                 <a href="{{ url_for('main.export_csv') }}">
                     <i class="fas fa-file-export"></i>
                     <span>Export CSV</span>

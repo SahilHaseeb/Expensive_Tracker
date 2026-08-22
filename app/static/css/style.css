@@ -1024,6 +1024,614 @@ tbody tr:hover td {
 .flash-error { border-left: 5px solid var(--danger); }
 .flash-info { border-left: 5px solid var(--info); }
 
+/* ========== AI ADVISOR CHATBOT ========== */
+.chatbot-layout {
+    max-width: 1000px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 80px);
+    gap: 16px;
+}
+
+.chat-header {
+    padding: 18px 24px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.chat-header-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.ai-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #8B5CF6, #EC4899);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #FFFFFF;
+    font-size: 22px;
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);
+}
+
+.chat-header-info h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.chat-header-info p {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.online-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--success);
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 8px var(--success);
+}
+
+.chat-window-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    padding: 20px;
+    gap: 16px;
+}
+
+.chat-messages {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding-right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.chat-message {
+    display: flex;
+    gap: 14px;
+    max-width: 85%;
+}
+
+.bot-message {
+    align-self: flex-start;
+}
+
+.user-message {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+
+.message-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+}
+
+.bot-message .message-avatar {
+    background: linear-gradient(135deg, #8B5CF6, #6366F1);
+    color: #FFFFFF;
+}
+
+.user-message .message-avatar {
+    background: linear-gradient(135deg, #EC4899, #F43F5E);
+    color: #FFFFFF;
+}
+
+.message-content {
+    padding: 16px 20px;
+    border-radius: 18px;
+    font-size: 14.5px;
+    line-height: 1.6;
+}
+
+.bot-message .message-content {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    border-top-left-radius: 4px;
+    box-shadow: var(--shadow-sm);
+}
+
+.user-message .message-content {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: #FFFFFF;
+    border-top-right-radius: 4px;
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
+}
+
+.chat-heading {
+    font-family: 'Outfit', sans-serif;
+    margin: 10px 0 6px;
+    color: var(--primary);
+    font-size: 16px;
+}
+
+.chat-list {
+    margin: 8px 0 8px 18px;
+}
+
+.chat-code {
+    background: rgba(99, 102, 241, 0.15);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--primary);
+}
+
+/* Typing bubble */
+.typing-bubble {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 18px !important;
+}
+
+.typing-bubble .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--primary);
+    animation: pulse 1.2s infinite ease-in-out;
+}
+
+.typing-bubble .dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-bubble .dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* Suggestion Chips */
+.chat-suggestions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 10px 0 4px;
+    border-top: 1px solid var(--border-color);
+}
+
+.suggestion-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.suggestion-chip {
+    padding: 7px 14px;
+    border-radius: var(--radius-full);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    font-size: 12.5px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: var(--transition-bounce);
+}
+
+.suggestion-chip:hover {
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--primary);
+    transform: translateY(-2px);
+}
+
+/* Input Area */
+.chat-input-area {
+    margin-top: auto;
+}
+
+.input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-surface);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 6px 8px 6px 18px;
+    transition: border-color var(--transition-fast);
+}
+
+.input-wrapper:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+}
+
+.input-wrapper input {
+    flex-grow: 1;
+    border: none;
+    background: transparent;
+    color: var(--text-main);
+    font-size: 15px;
+    outline: none;
+    font-family: inherit;
+}
+
+.btn-send {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    border: none;
+    color: #FFFFFF;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-bounce);
+}
+
+.btn-send:hover {
+    transform: scale(1.08);
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+}
+
+/* ========== SHOPPING PRICE COMPARISON ========== */
+.shopping-layout {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.shopping-header-card {
+    padding: 34px;
+    border-radius: var(--radius-lg);
+    margin-bottom: 28px;
+}
+
+.shopping-intro {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 24px;
+}
+
+.shopping-icon-badge {
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #10B981, #3B82F6);
+    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+    box-shadow: 0 8px 20px -4px rgba(16, 185, 129, 0.4);
+}
+
+.shopping-intro h1 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+}
+
+.shopping-intro p {
+    color: var(--text-muted);
+    font-size: 14.5px;
+    margin-top: 4px;
+}
+
+.shopping-search-form {
+    margin-bottom: 20px;
+}
+
+.search-input-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-surface);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 8px 12px 8px 20px;
+    box-shadow: var(--shadow-sm);
+    flex-wrap: wrap;
+}
+
+.search-input-group:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+}
+
+.search-icon {
+    color: var(--text-subtle);
+    font-size: 17px;
+}
+
+.search-input-group input {
+    flex-grow: 1;
+    min-width: 250px;
+    border: none;
+    background: transparent;
+    color: var(--text-main);
+    font-size: 15px;
+    outline: none;
+    font-family: inherit;
+}
+
+.sort-select {
+    padding: 10px 14px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--text-main);
+    font-size: 13.5px;
+    outline: none;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.quick-category-pills {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.pills-label {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.category-pill {
+    padding: 6px 14px;
+    border-radius: var(--radius-full);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    font-size: 12.5px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: var(--transition-bounce);
+}
+
+.category-pill:hover,
+.category-pill.active {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: #FFFFFF;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.results-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.results-count {
+    font-size: 14.5px;
+    color: var(--text-muted);
+}
+
+.search-term {
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.engine-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: rgba(16, 185, 129, 0.12);
+    color: var(--success);
+    border-radius: var(--radius-full);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Deals Grid */
+.deals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+}
+
+.deal-card {
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    padding: 20px;
+    position: relative;
+}
+
+.best-price-card {
+    border: 1.5px solid var(--success) !important;
+}
+
+.deal-badges-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.store-badge {
+    padding: 4px 10px;
+    background: rgba(99, 102, 241, 0.12);
+    color: var(--primary);
+    border-radius: 8px;
+    font-size: 11.5px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.best-deal-badge {
+    padding: 4px 10px;
+    background: linear-gradient(135deg, #10B981, #059669);
+    color: #FFFFFF;
+    border-radius: 8px;
+    font-size: 11.5px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.discount-badge {
+    padding: 4px 10px;
+    background: rgba(239, 68, 68, 0.12);
+    color: var(--danger);
+    border-radius: 8px;
+    font-size: 11.5px;
+    font-weight: 700;
+}
+
+.deal-image-wrapper {
+    height: 180px;
+    border-radius: var(--radius-md);
+    background: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: 16px;
+    padding: 10px;
+}
+
+.deal-image-wrapper img {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+    transition: transform 0.4s ease;
+}
+
+.deal-card:hover .deal-image-wrapper img {
+    transform: scale(1.08);
+}
+
+.deal-details {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.deal-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-main);
+    line-height: 1.4;
+    height: 42px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    margin-bottom: 10px;
+}
+
+.deal-rating-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    margin-bottom: 14px;
+}
+
+.stars {
+    color: #F59E0B;
+    font-weight: 700;
+}
+
+.reviews-count {
+    color: var(--text-muted);
+}
+
+.deal-price-section {
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+    margin-bottom: 14px;
+}
+
+.price-wrapper {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.current-price {
+    font-family: 'Outfit', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-main);
+}
+
+.original-price {
+    font-size: 13.5px;
+    color: var(--text-subtle);
+    text-decoration: line-through;
+}
+
+.shipping-info {
+    display: block;
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.btn-deal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 16px;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: #FFFFFF;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    font-size: 13.5px;
+    font-weight: 600;
+    transition: var(--transition-bounce);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.btn-deal:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.45);
+}
+
+.no-deals-card {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    border-radius: var(--radius-lg);
+    color: var(--text-muted);
+}
+
+.no-deals-card i {
+    font-size: 52px;
+    color: var(--text-subtle);
+    margin-bottom: 16px;
+}
+
 /* ========== RESPONSIVE DESIGN ========== */
 @media (max-width: 1024px) {
     .charts-grid {
@@ -1065,5 +1673,9 @@ tbody tr:hover td {
         left: 20px;
         top: 80px;
         max-width: none;
+    }
+    
+    .chatbot-layout {
+        height: calc(100vh - 120px);
     }
 }

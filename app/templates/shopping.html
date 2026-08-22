@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Live Price Finder & Deals - Smart Expense Tracker{% endblock %}
+
+{% block content %}
+<div class="shopping-layout animate-fade-up">
+    <!-- Shopping Header -->
+    <div class="shopping-header-card glass">
+        <div class="shopping-intro">
+            <div class="shopping-icon-badge">
+                <i class="fas fa-tags"></i>
+            </div>
+            <div>
+                <h1>Live Shopping Price Finder & Deals</h1>
+                <p>Compare real-time product prices and discounts across top retailers (Amazon, Flipkart, Walmart, eBay) to save before you buy.</p>
+            </div>
+        </div>
+
+        <!-- Search Form -->
+        <form method="GET" action="{{ url_for('shopping.index') }}" class="shopping-search-form">
+            <div class="search-input-group">
+                <i class="fas fa-magnifying-glass search-icon"></i>
+                <input type="text" name="q" value="{{ current_query }}" placeholder="Search products, brands, models (e.g. Sony WH-1000XM5, iPhone 15, Running Shoes)..." required autocomplete="off">
+                <select name="sort" class="sort-select">
+                    <option value="price_low" {% if current_sort == 'price_low' %}selected{% endif %}>💰 Lowest Price First</option>
+                    <option value="rating" {% if current_sort == 'rating' %}selected{% endif %}>⭐ Highest Rated</option>
+                    <option value="price_high" {% if current_sort == 'price_high' %}selected{% endif %}>💎 Premium First</option>
+                </select>
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-bolt"></i> Search Deals
+                </button>
+            </div>
+        </form>
+
+        <!-- Quick Search Filter Pills -->
+        <div class="quick-category-pills">
+            <span class="pills-label"><i class="fas fa-fire"></i> Popular:</span>
+            <a href="{{ url_for('shopping.index', q='wireless earbuds') }}" class="category-pill {% if current_query == 'wireless earbuds' %}active{% endif %}">🎧 Wireless Earbuds</a>
+            <a href="{{ url_for('shopping.index', q='macbook laptop') }}" class="category-pill {% if current_query == 'macbook laptop' %}active{% endif %}">💻 Laptops</a>
+            <a href="{{ url_for('shopping.index', q='smartphones 5g') }}" class="category-pill {% if current_query == 'smartphones 5g' %}active{% endif %}">📱 5G Phones</a>
+            <a href="{{ url_for('shopping.index', q='running shoes') }}" class="category-pill {% if current_query == 'running shoes' %}active{% endif %}">👟 Running Shoes</a>
+            <a href="{{ url_for('shopping.index', q='smart watch') }}" class="category-pill {% if current_query == 'smart watch' %}active{% endif %}">⌚ Smart Watches</a>
+        </div>
+    </div>
+
+    <!-- Results Information Bar -->
+    <div class="results-bar">
+        <div class="results-count">
+            <i class="fas fa-layer-group"></i> Found <strong>{{ results.products|length }}</strong> live store deals for <span class="search-term">"{{ current_query }}"</span>
+        </div>
+        <div class="engine-badge">
+            <i class="fas fa-shield-check"></i> {{ results.source_type }}
+        </div>
+    </div>
+
+    <!-- Product Deal Cards Grid -->
+    <div class="deals-grid">
+        {% for item in results.products %}
+        <div class="deal-card glass card-hover {% if item.is_best_price %}best-price-card{% endif %}">
+            <!-- Badges -->
+            <div class="deal-badges-container">
+                <span class="store-badge">
+                    <i class="fas fa-store"></i> {{ item.source }}
+                </span>
+                {% if item.is_best_price %}
+                <span class="best-deal-badge animate-pulse-glow">
+                    <i class="fas fa-crown"></i> Lowest Price
+                </span>
+                {% elif item.discount %}
+                <span class="discount-badge">
+                    {{ item.discount }}
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- Thumbnail -->
+            <div class="deal-image-wrapper">
+                <img src="{{ item.thumbnail }}" alt="{{ item.title }}" loading="lazy">
+            </div>
+
+            <!-- Content -->
+            <div class="deal-details">
+                <h3 class="deal-title" title="{{ item.title }}">{{ item.title }}</h3>
+                
+                <div class="deal-rating-row">
+                    <span class="stars">
+                        <i class="fas fa-star"></i> {{ item.rating }}
+                    </span>
+                    <span class="reviews-count">({{ item.reviews }} reviews)</span>
+                </div>
+
+                <div class="deal-price-section">
+                    <div class="price-wrapper">
+                        <span class="current-price">{{ item.price }}</span>
+                        {% if item.original_price %}
+                        <span class="original-price">{{ item.original_price }}</span>
+                        {% endif %}
+                    </div>
+                    <span class="shipping-info"><i class="fas fa-truck-fast"></i> {{ item.delivery }}</span>
+                </div>
+
+                <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer" class="btn-deal">
+                    <span>View Deal on {{ item.source }}</span>
+                    <i class="fas fa-arrow-up-right-from-square"></i>
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <div class="no-deals-card glass">
+            <i class="fas fa-magnifying-glass-arrow-right"></i>
+            <h3>No matching products found</h3>
+            <p>Try searching for general product terms like "laptop", "smart phone", or "headphones".</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
