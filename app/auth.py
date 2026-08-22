@@ -2,39 +2,8 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db
 from app.models import User
-import json
-import os
-from datetime import datetime
 
 auth = Blueprint('auth', __name__)
-
-def save_user_to_json(username, email, password_hash):
-    """Save registered user data to JSON file"""
-    try:
-        user_data_dir = 'user_data'
-        if not os.path.exists(user_data_dir):
-            os.makedirs(user_data_dir)
-        
-        json_file = os.path.join(user_data_dir, 'registered_users.json')
-        
-        if os.path.exists(json_file):
-            with open(json_file, 'r') as f:
-                users = json.load(f)
-        else:
-            users = []
-        
-        users.append({
-            'username': username,
-            'email': email,
-            'password_hash': password_hash,
-            'registration_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'ip_address': request.remote_addr
-        })
-        
-        with open(json_file, 'w') as f:
-            json.dump(users, f, indent=4)
-    except Exception as e:
-        print(f"Error saving to JSON: {e}")
 
 @auth.route('/register', methods=['GET', 'POST'])
 def register():
@@ -63,9 +32,6 @@ def register():
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
-        
-        # Save to JSON file backup
-        save_user_to_json(username, email, user.password_hash)
         
         # Automatically log in the user upon registration
         login_user(user, remember=True)
