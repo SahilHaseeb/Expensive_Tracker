@@ -152,16 +152,30 @@
 
 {% block extra_js %}
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
 {% if pie_chart_json %}
+<script id="pie-chart-data" type="application/json">
+{{ pie_chart_json | safe }}
+</script>
 <script>
-    window.pieData = {{ pie_chart_json | safe }};
-    Plotly.newPlot('pie-chart', window.pieData.data, window.pieData.layout, {responsive: true, displayModeBar: false});
+    const pieDataNode = document.getElementById('pie-chart-data');
+    if (pieDataNode) {
+        window.pieData = JSON.parse(pieDataNode.textContent);
+        Plotly.newPlot('pie-chart', window.pieData.data, window.pieData.layout, {responsive: true, displayModeBar: false});
+    }
 </script>
 {% endif %}
+
 {% if line_chart_json %}
+<script id="line-chart-data" type="application/json">
+{{ line_chart_json | safe }}
+</script>
 <script>
-    window.lineData = {{ line_chart_json | safe }};
-    Plotly.newPlot('line-chart', window.lineData.data, window.lineData.layout, {responsive: true, displayModeBar: false});
+    const lineDataNode = document.getElementById('line-chart-data');
+    if (lineDataNode) {
+        window.lineData = JSON.parse(lineDataNode.textContent);
+        Plotly.newPlot('line-chart', window.lineData.data, window.lineData.layout, {responsive: true, displayModeBar: false});
+    }
 </script>
 {% endif %}
 {% endblock %}
