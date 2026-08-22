@@ -53,7 +53,7 @@
                 </div>
 
                 <div class="progress-track">
-                    <div class="progress-fill {% if b.status == 'danger' %}fill-danger{% elif b.status == 'warning' %}fill-warning{% else %}fill-success{% endif %}" style="width: {{ b.percentage }}%;"></div>
+                    <div class="progress-fill dynamic-bar {% if b.status == 'danger' %}fill-danger{% elif b.status == 'warning' %}fill-warning{% else %}fill-success{% endif %}" data-percentage="{{ b.percentage }}"></div>
                 </div>
 
                 <div class="budget-footer-row">
@@ -100,4 +100,15 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.dynamic-bar').forEach(function(bar) {
+        const pct = bar.getAttribute('data-percentage') || '0';
+        bar.style.width = pct + '%';
+    });
+});
+</script>
 {% endblock %}

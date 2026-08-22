@@ -96,7 +96,7 @@
         <div class="health-score-card glass card-hover">
             <div class="health-score-header">
                 <h3><i class="fas fa-shield-heart text-success"></i> Financial Health</h3>
-                <span class="health-grade-pill" style="background: rgba(16, 185, 129, 0.15); color: {{ health_score.color }};">
+                <span class="health-grade-pill" id="healthGradePill" data-color="{{ health_score.color }}">
                     {{ health_score.grade }}
                 </span>
             </div>
@@ -104,7 +104,7 @@
                 <div class="score-circle-wrapper">
                     <svg class="score-svg" viewBox="0 0 100 100">
                         <circle class="score-bg-circle" cx="50" cy="50" r="42"></circle>
-                        <circle class="score-progress-circle" cx="50" cy="50" r="42" style="stroke: {{ health_score.color }}; stroke-dashoffset: calc(264 - (264 * {{ health_score.score }}) / 100);"></circle>
+                        <circle class="score-progress-circle" id="healthScoreCircle" cx="50" cy="50" r="42" data-score="{{ health_score.score }}" data-color="{{ health_score.color }}"></circle>
                     </svg>
                     <div class="score-inner-text">
                         <span class="score-num">{{ health_score.score }}</span>
@@ -116,7 +116,7 @@
                     {% if health_score.tips %}
                     <ul class="health-tip-list">
                         {% for tip in health_score.tips %}
-                        <li><i class="fas fa-check-circle" style="color: {{ health_score.color }};"></i> {{ tip }}</li>
+                        <li><i class="fas fa-check-circle" style="color: #10B981;"></i> {{ tip }}</li>
                         {% endfor %}
                     </ul>
                     {% endif %}
@@ -154,7 +154,7 @@
                     </span>
                 </div>
                 <div class="progress-track">
-                    <div class="progress-fill {% if b.is_over %}fill-danger{% elif b.is_warning %}fill-warning{% else %}fill-success{% endif %}" style="width: {{ b.percentage }}%;"></div>
+                    <div class="progress-fill dynamic-bar {% if b.is_over %}fill-danger{% elif b.is_warning %}fill-warning{% else %}fill-success{% endif %}" data-percentage="{{ b.percentage }}"></div>
                 </div>
             </div>
             {% endfor %}
@@ -280,6 +280,32 @@
 {% block extra_js %}
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 <script src="{{ url_for('static', filename='js/voice-expense.js') }}"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Dynamic progress bar widths
+    document.querySelectorAll('.dynamic-bar').forEach(function(bar) {
+        const pct = bar.getAttribute('data-percentage') || '0';
+        bar.style.width = pct + '%';
+    });
+
+    // Health Score Circle calculation
+    const circle = document.getElementById('healthScoreCircle');
+    if (circle) {
+        const score = parseInt(circle.getAttribute('data-score') || '85');
+        const color = circle.getAttribute('data-color') || '#10B981';
+        circle.style.stroke = color;
+        circle.style.strokeDashoffset = (264 - (264 * score / 100)).toString();
+    }
+
+    const gradePill = document.getElementById('healthGradePill');
+    if (gradePill) {
+        const color = gradePill.getAttribute('data-color') || '#10B981';
+        gradePill.style.color = color;
+        gradePill.style.backgroundColor = color + '22';
+    }
+});
+</script>
 
 {% if pie_chart_json %}
 <script id="pie-chart-data" type="application/json">
