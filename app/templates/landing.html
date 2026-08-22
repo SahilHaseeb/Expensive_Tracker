@@ -1,24 +1,42 @@
 {% extends "base.html" %}
-{% block title %}Smart Expense Tracker - AI Powered Personal Finance{% endblock %}
+{% block title %}Smart Expense Tracker - AI Powered Personal Finance Engine{% endblock %}
 
 {% block content %}
 <div class="landing-page animate-fade-up">
+    <!-- Public Header / Navigation -->
+    <header class="public-nav glass">
+        <div class="brand-logo">
+            <i class="fas fa-wallet text-primary"></i>
+            <span>ExpenseAI</span>
+        </div>
+        <nav class="public-nav-links">
+            <a href="#features">Features</a>
+            <a href="#about">About Us</a>
+            <a href="#contact">Contact</a>
+            <a href="{{ url_for('auth.login') }}" class="btn-nav-login">Sign In</a>
+            <a href="{{ url_for('auth.register') }}" class="btn-nav-register">Get Started</a>
+        </nav>
+    </header>
+
     <!-- Hero Section -->
     <section class="hero-section">
         <div class="hero-container">
             <div class="hero-text">
                 <div class="hero-pill">
                     <i class="fas fa-sparkles"></i>
-                    <span>Next-Gen Machine Learning Financial Engine</span>
+                    <span>Next-Gen Gemini AI & ML Financial Intelligence</span>
                 </div>
-                <h1>Smart Expense Tracking <br><span class="gradient-text">Powered by AI</span></h1>
-                <p>Gain absolute control over your financial freedom. Track expenses in real-time, predict future monthly costs with ML, and make intelligent budgeting decisions effortlessly.</p>
+                <h1>Master Your Personal Economy <br><span class="gradient-text">Powered by Artificial Intelligence</span></h1>
+                <p>Track spending effortlessly, scan receipts with Gemini Vision OCR, speak your expenses, track recurring subscriptions, and predict future costs with machine learning.</p>
                 <div class="hero-action-buttons">
                     <a href="{{ url_for('auth.register') }}" class="btn-primary">
                         <i class="fas fa-rocket"></i> Get Started Free
                     </a>
                     <a href="{{ url_for('auth.login') }}" class="btn-secondary">
-                        <i class="fas fa-arrow-right-to-bracket"></i> Sign In
+                        <i class="fas fa-arrow-right-to-bracket"></i> Sign In to Dashboard
+                    </a>
+                    <a href="https://wa.me/923284538632" target="_blank" class="btn-whatsapp-hero">
+                        <i class="fab fa-whatsapp"></i> Chat with Us
                     </a>
                 </div>
             </div>
@@ -29,27 +47,27 @@
                         <div class="mockup-dots">
                             <span></span><span></span><span></span>
                         </div>
-                        <span class="mockup-title"><i class="fas fa-shield-halved"></i> Live AI Engine</span>
+                        <span class="mockup-title"><i class="fas fa-brain text-primary"></i> Live AI Engine</span>
                     </div>
                     <div class="mockup-body">
                         <div class="mockup-stat">
-                            <small>Predicted Next Month</small>
-                            <h3>₹24,850.00</h3>
-                            <span class="badge-trend"><i class="fas fa-arrow-trend-down"></i> -4.2% projected</span>
+                            <small>Financial Health Score</small>
+                            <h3>88 / 100 <span class="badge-grade">Elite 🏆</span></h3>
+                            <span class="badge-trend"><i class="fas fa-arrow-trend-down"></i> AI Predicts: ₹24,850 next month</span>
                         </div>
                         <div class="mockup-row">
                             <div class="mini-chip">
-                                <i class="fas fa-utensils text-warning"></i>
+                                <i class="fas fa-camera text-primary"></i>
                                 <div>
-                                    <small>Food & Dining</small>
-                                    <strong>₹8,450</strong>
+                                    <small>OCR Scanner</small>
+                                    <strong>Gemini Vision</strong>
                                 </div>
                             </div>
                             <div class="mini-chip">
-                                <i class="fas fa-car text-info"></i>
+                                <i class="fas fa-microphone text-success"></i>
                                 <div>
-                                    <small>Transport</small>
-                                    <strong>₹3,200</strong>
+                                    <small>Voice Input</small>
+                                    <strong>Instant Speech</strong>
                                 </div>
                             </div>
                         </div>
@@ -59,87 +77,374 @@
         </div>
     </section>
 
-    <!-- Features Section -->
-    <section class="features-section">
+    <!-- Upgraded 8 Power Features Grid -->
+    <section class="features-section" id="features">
         <div class="section-title">
-            <h2>Engineered for Financial Clarity</h2>
-            <p>Everything you need to master your personal economy with zero friction</p>
+            <span class="sub-heading-pill">ALL-IN-ONE PLATFORM</span>
+            <h2>Engineered for Absolute Financial Clarity</h2>
+            <p>Every tool and AI capability you need to control, analyze, and optimize your wealth with zero friction.</p>
         </div>
 
         <div class="features-grid">
+            <!-- 1. AI Receipt Scanner -->
             <div class="feature-box glass card-hover delay-1">
-                <div class="feature-icon-box" style="background: linear-gradient(135deg, #6366F1, #8B5CF6);">
+                <div class="feature-icon-box" style="background: linear-gradient(135deg, #8B5CF6, #EC4899);">
+                    <i class="fas fa-camera"></i>
+                </div>
+                <h3>📸 AI Receipt Scanner</h3>
+                <p>Upload or drag-and-drop shopping slips and bills. Google Gemini Vision OCR extracts the store name, date, and amount automatically.</p>
+            </div>
+
+            <!-- 2. Voice-to-Expense -->
+            <div class="feature-box glass card-hover delay-2">
+                <div class="feature-icon-box" style="background: linear-gradient(135deg, #10B981, #06B6D4);">
+                    <i class="fas fa-microphone"></i>
+                </div>
+                <h3>🗣️ Voice-to-Expense Input</h3>
+                <p>Speak naturally (<em>"Spent 1500 on dinner with friends"</em>). Speech-to-Text NLP extracts amount, category, and date in seconds.</p>
+            </div>
+
+            <!-- 3. AI Financial Advisor -->
+            <div class="feature-box glass card-hover delay-3">
+                <div class="feature-icon-box" style="background: linear-gradient(135deg, #6366F1, #3B82F6);">
                     <i class="fas fa-brain"></i>
                 </div>
-                <h3>Predictive ML Analytics</h3>
-                <p>Trained linear regression models forecast next month's spending patterns directly on your data.</p>
+                <h3>🤖 Gemini AI Advisor</h3>
+                <p>Get personalized budgeting advice, tax tips, and debt reduction strategies tailored to your exact live monthly spending data.</p>
             </div>
 
-            <div class="feature-box glass card-hover delay-2">
-                <div class="feature-icon-box" style="background: linear-gradient(135deg, #EC4899, #F43F5E);">
-                    <i class="fas fa-chart-pie"></i>
-                </div>
-                <h3>Visual Intelligence</h3>
-                <p>Interactive Plotly charts and real-time donut breakdowns give instant category clarity.</p>
-            </div>
-
-            <div class="feature-box glass card-hover delay-3">
-                <div class="feature-icon-box" style="background: linear-gradient(135deg, #10B981, #14B8A6);">
-                    <i class="fas fa-shield-check"></i>
-                </div>
-                <h3>Bank-Grade Privacy</h3>
-                <p>Your records and models are isolated, encrypted, and accessible solely by your authenticated session.</p>
-            </div>
-
+            <!-- 4. Price Comparison -->
             <div class="feature-box glass card-hover delay-4">
                 <div class="feature-icon-box" style="background: linear-gradient(135deg, #F59E0B, #F97316);">
-                    <i class="fas fa-file-csv"></i>
+                    <i class="fas fa-bag-shopping"></i>
                 </div>
-                <h3>Instant Export</h3>
-                <p>Download clean, structured CSV reports anytime for accounting, taxes, or custom spreadsheets.</p>
+                <h3>🛒 Price & Deals Finder</h3>
+                <p>Search any product and compare live prices across multiple online stores to never overpay for your daily essentials.</p>
+            </div>
+
+            <!-- 5. Category Budgets -->
+            <div class="feature-box glass card-hover delay-1">
+                <div class="feature-icon-box" style="background: linear-gradient(135deg, #F43F5E, #FB7185);">
+                    <i class="fas fa-bullseye"></i>
+                </div>
+                <h3>🎯 Budget Limits & Caps</h3>
+                <p>Set custom monthly spending caps on Food, Transport, Rent, etc. Visual progress meters alert you before you overspend.</p>
+            </div>
+
+            <!-- 6. Recurring Subscriptions -->
+            <div class="feature-box glass card-hover delay-2">
+                <div class="feature-icon-box" style="background: linear-gradient(135deg, #8B5CF6, #6366F1);">
+                    <i class="fas fa-rotate"></i>
+                </div>
+                <h3>🔄 Subscriptions & Bill Alerts</h3>
+                <p>Track Netflix, Gym, WiFi, and utility bills. Receive dashboard notification alerts 3 days before any payment is due.</p>
+            </div>
+
+            <!-- 7. Health Score -->
+            <div class="feature-box glass card-hover delay-3">
+                <div class="feature-icon-box" style="background: linear-gradient(135deg, #10B981, #14B8A6);">
+                    <i class="fas fa-shield-heart"></i>
+                </div>
+                <h3>⭐ Financial Health Score</h3>
+                <p>A real-time 0-100 circular score measuring budget discipline, volatility, and spending hygiene with tailored AI action tips.</p>
+            </div>
+
+            <!-- 8. PDF Statements -->
+            <div class="feature-box glass card-hover delay-4">
+                <div class="feature-icon-box" style="background: linear-gradient(135deg, #3B82F6, #1D4ED8);">
+                    <i class="fas fa-file-invoice"></i>
+                </div>
+                <h3>📄 PDF Monthly Statements</h3>
+                <p>Generate high-resolution, invoice-grade financial summaries with itemized lists and category breakdowns in 1-click.</p>
             </div>
         </div>
     </section>
 
-    <!-- Metrics Showcase -->
+    <!-- Metrics Section -->
     <section class="metrics-section glass">
         <div class="metric-block">
             <h3>99.4%</h3>
-            <p>Model Accuracy</p>
+            <p>ML Forecast Precision</p>
         </div>
         <div class="metric-block">
-            <h3>100%</h3>
-            <p>Free & Open</p>
+            <h3>7+</h3>
+            <p>Smart AI Tools</p>
         </div>
         <div class="metric-block">
             <h3>0.2s</h3>
-            <p>Response Time</p>
+            <p>Real-time Response</p>
         </div>
         <div class="metric-block">
-            <h3>24/7</h3>
-            <p>Cloud Reliability</p>
+            <h3>100%</h3>
+            <p>Free & Secure</p>
         </div>
     </section>
 
-    <!-- Call to Action -->
+    <!-- About Us Section -->
+    <section class="about-section glass" id="about">
+        <div class="about-grid">
+            <div class="about-text-col">
+                <span class="sub-heading-pill">ABOUT THE PLATFORM</span>
+                <h2>Empowering Smarter Financial Decisions Worldwide</h2>
+                <p class="about-lead">ExpenseAI was founded to solve a major problem: personal expense tracking was boring, manual, and reactive. We turned it into an intelligent, automated, and proactive experience.</p>
+                <p>By leveraging state-of-the-art AI (Google Gemini Vision, Natural Language Speech Parsing, and Scikit-Learn Regression models), we provide individuals and families with institutional-grade financial clarity.</p>
+                
+                <div class="founder-card glass">
+                    <div class="founder-avatar">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div class="founder-info">
+                        <h4>Sahil Haseeb</h4>
+                        <p>Founder & Lead Software Engineer</p>
+                        <small><i class="fas fa-location-dot text-danger"></i> New Garden Town, Lahore, Pakistan</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="about-highlights-col">
+                <div class="highlight-card">
+                    <div class="hl-icon"><i class="fas fa-lock text-primary"></i></div>
+                    <div>
+                        <h4>Privacy & Isolation</h4>
+                        <p>Your financial data is encrypted and strictly accessible only to your authenticated account session.</p>
+                    </div>
+                </div>
+                <div class="highlight-card">
+                    <div class="hl-icon"><i class="fas fa-bolt text-warning"></i></div>
+                    <div>
+                        <h4>Instant AI Processing</h4>
+                        <p>Receipt OCR and Voice Speech processing execute under sub-second latency for zero friction.</p>
+                    </div>
+                </div>
+                <div class="highlight-card">
+                    <div class="hl-icon"><i class="fas fa-coins text-success"></i></div>
+                    <div>
+                        <h4>Global Multi-Currency</h4>
+                        <p>Full native support for ₹ (INR), Rs. (PKR), $ (USD), € (EUR), £ (GBP), AED, and SAR.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Us & Inquiry Section -->
+    <section class="contact-section" id="contact">
+        <div class="section-title">
+            <span class="sub-heading-pill">GET IN TOUCH</span>
+            <h2>Contact Us & Support</h2>
+            <p>Have questions, need custom features, or want to collaborate? Reach out to us directly anytime!</p>
+        </div>
+
+        <div class="contact-grid">
+            <!-- Contact Details Card -->
+            <div class="contact-info-card glass">
+                <h3>Contact Information</h3>
+                <p>We are always available to help you with your expense tracking journey.</p>
+                
+                <div class="contact-detail-items">
+                    <a href="mailto:haseebsahil0081@gmail.com" class="contact-item-row">
+                        <div class="ci-icon" style="background: linear-gradient(135deg, #EC4899, #F43F5E);">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <div>
+                            <small>Official Email</small>
+                            <strong>haseebsahil0081@gmail.com</strong>
+                        </div>
+                    </a>
+
+                    <a href="https://wa.me/923284538632" target="_blank" class="contact-item-row">
+                        <div class="ci-icon" style="background: linear-gradient(135deg, #10B981, #34D399);">
+                            <i class="fab fa-whatsapp"></i>
+                        </div>
+                        <div>
+                            <small>WhatsApp & Phone</small>
+                            <strong>+92 328 4538632 (03284538632)</strong>
+                        </div>
+                    </a>
+
+                    <div class="contact-item-row">
+                        <div class="ci-icon" style="background: linear-gradient(135deg, #6366F1, #8B5CF6);">
+                            <i class="fas fa-location-dot"></i>
+                        </div>
+                        <div>
+                            <small>Headquarters</small>
+                            <strong>New Garden Town, Lahore, Pakistan</strong>
+                        </div>
+                    </div>
+
+                    <div class="contact-item-row">
+                        <div class="ci-icon" style="background: linear-gradient(135deg, #F59E0B, #FBBF24);">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div>
+                            <small>Response Time</small>
+                            <strong>24/7 Available for Inquiries</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quick-contact-actions">
+                    <a href="mailto:haseebsahil0081@gmail.com?subject=Inquiry regarding ExpenseAI" class="btn-primary" style="flex: 1; text-align: center;">
+                        <i class="fas fa-envelope"></i> Send Email
+                    </a>
+                    <a href="https://wa.me/923284538632?text=Hello%20Sahil,%20I%20have%20an%20inquiry%20about%20ExpenseAI" target="_blank" class="btn-whatsapp-hero" style="flex: 1; text-align: center;">
+                        <i class="fab fa-whatsapp"></i> WhatsApp
+                    </a>
+                </div>
+            </div>
+
+            <!-- Contact Message Form Card -->
+            <div class="contact-form-card glass">
+                <h3><i class="fas fa-paper-plane text-primary"></i> Send a Direct Message</h3>
+                <p>Fill out the form below and our team will get back to you promptly.</p>
+
+                <form method="POST" action="{{ url_for('main.contact_submit') }}" class="contact-form">
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label><i class="fas fa-user"></i> Full Name *</label>
+                            <input type="text" name="name" placeholder="Your Name" required>
+                        </div>
+                        <div class="input-group">
+                            <label><i class="fas fa-envelope"></i> Email Address *</label>
+                            <input type="email" name="email" placeholder="you@example.com" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label><i class="fas fa-phone"></i> Phone / WhatsApp</label>
+                            <input type="text" name="phone" placeholder="03284538632">
+                        </div>
+                        <div class="input-group">
+                            <label><i class="fas fa-heading"></i> Subject</label>
+                            <input type="text" name="subject" placeholder="Feature Request / Question">
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label><i class="fas fa-message"></i> Message *</label>
+                        <textarea name="message" rows="4" placeholder="Write your message here..." required></textarea>
+                    </div>
+
+                    <button type="submit" class="btn-primary" style="width: 100%; margin-top: 10px;">
+                        <i class="fas fa-paper-plane"></i> Send Inquiry Message
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Call to Action Banner -->
     <section class="cta-banner glass animate-pulse-glow">
         <h2>Start Tracking Smarter Today</h2>
-        <p>Join smart spenders taking charge of their budget in seconds.</p>
-        <a href="{{ url_for('auth.register') }}" class="btn-primary" style="margin-top: 20px;">
-            <i class="fas fa-sparkles"></i> Create Free Account
-        </a>
+        <p>Join thousands of smart spenders taking charge of their budget in seconds.</p>
+        <div class="hero-action-buttons" style="justify-content: center; margin-top: 24px;">
+            <a href="{{ url_for('auth.register') }}" class="btn-primary">
+                <i class="fas fa-sparkles"></i> Create Free Account
+            </a>
+            <a href="{{ url_for('auth.login') }}" class="btn-secondary">
+                <i class="fas fa-arrow-right-to-bracket"></i> Sign In
+            </a>
+        </div>
     </section>
+
+    <!-- Professional Footer -->
+    <footer class="landing-footer glass">
+        <div class="footer-grid">
+            <div class="footer-brand-col">
+                <div class="brand-logo" style="font-size: 22px;">
+                    <i class="fas fa-wallet text-primary"></i>
+                    <span>ExpenseAI</span>
+                </div>
+                <p>Next-Generation AI & ML Personal Finance Intelligence Platform.</p>
+                <p><small>© 2026 ExpenseAI by <strong>Sahil Haseeb</strong>. All rights reserved.</small></p>
+            </div>
+
+            <div class="footer-links-col">
+                <h4>Quick Navigation</h4>
+                <ul>
+                    <li><a href="#features">Platform Features</a></li>
+                    <li><a href="#about">About the Founder</a></li>
+                    <li><a href="#contact">Contact & Support</a></li>
+                    <li><a href="{{ url_for('auth.login') }}">User Login</a></li>
+                    <li><a href="{{ url_for('auth.register') }}">Register Account</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-contact-col">
+                <h4>Get in Touch</h4>
+                <p><i class="fas fa-envelope text-primary"></i> haseebsahil0081@gmail.com</p>
+                <p><i class="fab fa-whatsapp text-success"></i> +92 328 4538632</p>
+                <p><i class="fas fa-location-dot text-danger"></i> New Garden Town, Lahore, PK</p>
+            </div>
+        </div>
+    </footer>
 </div>
 
 <style>
 .landing-page {
-    max-width: 1240px;
+    max-width: 1280px;
     margin: 0 auto;
-    padding: 20px 20px 60px;
+    padding: 10px 20px 60px;
 }
 
+/* Public Header Nav */
+.public-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 28px;
+    border-radius: var(--radius-full);
+    margin-bottom: 30px;
+}
+
+.brand-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text-main);
+}
+
+.public-nav-links {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+}
+
+.public-nav-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: var(--transition-fast);
+}
+
+.public-nav-links a:hover {
+    color: var(--primary);
+}
+
+.btn-nav-login {
+    padding: 8px 18px;
+    border-radius: var(--radius-full);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+}
+
+.btn-nav-register {
+    padding: 8px 20px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white !important;
+    font-weight: 700 !important;
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+}
+
+/* Hero Section */
 .hero-section {
-    padding: 60px 0 80px;
+    padding: 50px 0 70px;
 }
 
 .hero-container {
@@ -165,7 +470,7 @@
 
 .hero-text h1 {
     font-family: 'Outfit', sans-serif;
-    font-size: 52px;
+    font-size: 48px;
     font-weight: 800;
     line-height: 1.15;
     letter-spacing: -1px;
@@ -179,7 +484,7 @@
 }
 
 .hero-text p {
-    font-size: 17px;
+    font-size: 16.5px;
     color: var(--text-muted);
     line-height: 1.65;
     margin-bottom: 34px;
@@ -188,8 +493,30 @@
 
 .hero-action-buttons {
     display: flex;
-    gap: 16px;
+    gap: 14px;
     flex-wrap: wrap;
+    align-items: center;
+}
+
+.btn-whatsapp-hero {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 24px;
+    background: linear-gradient(135deg, #10B981, #059669);
+    color: white;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 14.5px;
+    transition: var(--transition-bounce);
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+}
+
+.btn-whatsapp-hero:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.5);
+    color: white;
 }
 
 /* Mockup Card */
@@ -224,7 +551,6 @@
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: var(--border-color);
 }
 
 .mockup-dots span:nth-child(1) { background: #EF4444; }
@@ -234,7 +560,6 @@
 .mockup-title {
     font-size: 12px;
     font-weight: 700;
-    color: var(--primary);
 }
 
 .mockup-stat {
@@ -253,19 +578,27 @@
 
 .mockup-stat h3 {
     font-family: 'Outfit', sans-serif;
-    font-size: 30px;
+    font-size: 28px;
     font-weight: 800;
     color: var(--text-main);
     margin: 4px 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.badge-grade {
+    font-size: 13px;
+    padding: 4px 10px;
+    background: rgba(16, 185, 129, 0.18);
+    color: var(--success);
+    border-radius: var(--radius-full);
 }
 
 .badge-trend {
     font-size: 12px;
     font-weight: 700;
-    color: var(--success);
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
+    color: var(--primary);
 }
 
 .mockup-row {
@@ -296,13 +629,13 @@
 
 .mini-chip strong {
     font-family: 'Outfit', sans-serif;
-    font-size: 14px;
+    font-size: 13.5px;
     color: var(--text-main);
 }
 
 /* Features Grid */
 .features-section {
-    padding: 60px 0;
+    padding: 70px 0 40px;
 }
 
 .section-title {
@@ -310,53 +643,67 @@
     margin-bottom: 50px;
 }
 
+.sub-heading-pill {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: var(--radius-full);
+    background: rgba(99, 102, 241, 0.12);
+    color: var(--primary);
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
 .section-title h2 {
     font-family: 'Outfit', sans-serif;
     font-size: 34px;
     font-weight: 800;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 
 .section-title p {
     color: var(--text-muted);
     font-size: 16px;
+    max-width: 600px;
+    margin: 0 auto;
 }
 
 .features-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 24px;
 }
 
 .feature-box {
-    padding: 34px 28px;
+    padding: 30px 26px;
     border-radius: var(--radius-lg);
     text-align: left;
 }
 
 .feature-icon-box {
-    width: 60px;
-    height: 60px;
-    border-radius: 18px;
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #FFFFFF;
-    font-size: 24px;
-    margin-bottom: 22px;
+    font-size: 22px;
+    margin-bottom: 20px;
     box-shadow: 0 8px 18px -4px rgba(0, 0, 0, 0.25);
 }
 
 .feature-box h3 {
     font-family: 'Outfit', sans-serif;
-    font-size: 19px;
+    font-size: 18px;
     font-weight: 700;
     margin-bottom: 10px;
 }
 
 .feature-box p {
     color: var(--text-muted);
-    font-size: 14.5px;
+    font-size: 14px;
     line-height: 1.6;
 }
 
@@ -364,7 +711,7 @@
 .metrics-section {
     padding: 44px;
     border-radius: var(--radius-lg);
-    margin: 40px 0;
+    margin: 50px 0;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 30px;
@@ -387,6 +734,214 @@
     margin-top: 4px;
 }
 
+/* About Us Section */
+.about-section {
+    padding: 50px 40px;
+    border-radius: var(--radius-lg);
+    margin: 60px 0;
+}
+
+.about-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 40px;
+    align-items: center;
+}
+
+.about-text-col h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    margin-bottom: 16px;
+}
+
+.about-lead {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-main);
+    line-height: 1.6;
+    margin-bottom: 14px;
+}
+
+.about-text-col p {
+    font-size: 14.5px;
+    color: var(--text-muted);
+    line-height: 1.65;
+    margin-bottom: 24px;
+}
+
+.founder-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    border-radius: var(--radius-md);
+}
+
+.founder-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.founder-info h4 {
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.founder-info p {
+    font-size: 13px;
+    color: var(--primary);
+    font-weight: 600;
+    margin: 2px 0 4px;
+}
+
+.founder-info small {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.about-highlights-col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.highlight-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+}
+
+.hl-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.highlight-card h4 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.highlight-card p {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+/* Contact Section */
+.contact-section {
+    padding: 60px 0;
+}
+
+.contact-grid {
+    display: grid;
+    grid-template-columns: 0.95fr 1.05fr;
+    gap: 30px;
+}
+
+.contact-info-card, .contact-form-card {
+    padding: 36px 32px;
+    border-radius: var(--radius-lg);
+}
+
+.contact-info-card h3, .contact-form-card h3 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+
+.contact-info-card p, .contact-form-card p {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 24px;
+}
+
+.contact-detail-items {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+.contact-item-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    text-decoration: none;
+    color: inherit;
+    transition: var(--transition-fast);
+}
+
+.contact-item-row:hover {
+    border-color: var(--primary);
+    transform: translateX(4px);
+}
+
+.ci-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+}
+
+.contact-item-row small {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.contact-item-row strong {
+    font-size: 13.5px;
+    color: var(--text-main);
+}
+
+.quick-contact-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.contact-form textarea {
+    padding: 12px 16px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+    outline: none;
+}
+
+.contact-form textarea:focus {
+    border-color: var(--primary);
+}
+
 /* CTA Banner */
 .cta-banner {
     padding: 60px 40px;
@@ -394,12 +949,12 @@
     text-align: center;
     background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(236, 72, 153, 0.1));
     border: 1px solid var(--glass-border);
-    margin-top: 40px;
+    margin: 50px 0;
 }
 
 .cta-banner h2 {
     font-family: 'Outfit', sans-serif;
-    font-size: 36px;
+    font-size: 34px;
     font-weight: 800;
     margin-bottom: 12px;
 }
@@ -411,22 +966,74 @@
     margin: 0 auto;
 }
 
-@media (max-width: 900px) {
-    .hero-container {
+/* Footer */
+.landing-footer {
+    padding: 50px 40px 30px;
+    border-radius: var(--radius-lg);
+    margin-top: 30px;
+}
+
+.footer-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1.2fr;
+    gap: 40px;
+}
+
+.footer-brand-col p {
+    color: var(--text-muted);
+    font-size: 13.5px;
+    margin: 12px 0 8px;
+    max-width: 320px;
+}
+
+.footer-links-col h4, .footer-contact-col h4 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+
+.footer-links-col ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.footer-links-col a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 13.5px;
+    transition: var(--transition-fast);
+}
+
+.footer-links-col a:hover {
+    color: var(--primary);
+}
+
+.footer-contact-col p {
+    color: var(--text-muted);
+    font-size: 13.5px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+@media (max-width: 960px) {
+    .hero-container, .about-grid, .contact-grid, .footer-grid {
         grid-template-columns: 1fr;
-        text-align: center;
-    }
-    .hero-pill {
-        margin: 0 auto 24px;
-    }
-    .hero-text p {
-        margin: 0 auto 30px;
-    }
-    .hero-action-buttons {
-        justify-content: center;
     }
     .hero-text h1 {
-        font-size: 38px;
+        font-size: 36px;
+    }
+    .public-nav {
+        flex-direction: column;
+        gap: 14px;
+        border-radius: var(--radius-lg);
+    }
+    .public-nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
     }
 }
 </style>

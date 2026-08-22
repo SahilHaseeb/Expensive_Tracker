@@ -218,3 +218,48 @@ def export_csv():
         mimetype='text/csv',
         headers={'Content-Disposition': 'attachment;filename=expenses.csv'}
     )
+
+@main.route('/contact', methods=['POST'])
+def contact_submit():
+    name = request.form.get('name', '').strip()
+    email = request.form.get('email', '').strip()
+    phone = request.form.get('phone', '').strip()
+    subject = request.form.get('subject', '').strip()
+    message = request.form.get('message', '').strip()
+
+    if not name or not email or not message:
+        flash('Please fill in all required fields (Name, Email, Message).', 'error')
+        return redirect(url_for('main.index') + '#contact')
+
+    try:
+        import os
+        import json
+        data_dir = 'user_data'
+        os.makedirs(data_dir, exist_ok=True)
+        file_path = os.path.join(data_dir, 'contact_inquiries.json')
+        
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
+                inquiries = json.load(f)
+        else:
+            inquiries = []
+
+        inquiries.append({
+            'name': name,
+            'email': email,
+            'phone': phone,
+            'subject': subject or 'General Inquiry',
+            'message': message,
+            'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'ip': request.remote_addr
+        })
+
+        with open(file_path, 'w') as f:
+            json.dump(inquiries, f, indent=4)
+
+        flash(f'Thank you {name}! Your message has been received. We will contact you at {email} shortly. ✉️', 'success')
+    except Exception as e:
+        print(f"Error saving contact message: {e}")
+        flash('Thank you! Your message has been noted.', 'success')
+
+    return redirect(url_for('main.index') + '#contact')
