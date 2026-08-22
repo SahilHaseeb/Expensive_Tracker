@@ -19,11 +19,30 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- Floating Dark/Light Mode Switcher -->
-    <button class="theme-toggle" id="themeToggleBtn" title="Toggle Dark/Light Mode (Ctrl+Shift+D)">
-        <i class="fas fa-moon"></i>
-        <i class="fas fa-sun"></i>
-    </button>
+    <!-- Floating Header Controls -->
+    <div class="top-floating-controls">
+        {% if current_user.is_authenticated %}
+        <!-- Currency Selector Dropdown -->
+        <div class="currency-selector-pill glass">
+            <i class="fas fa-coins text-warning"></i>
+            <select id="currencySelector" onchange="changeCurrency(this.value)" title="Choose preferred currency">
+                <option value="₹" {% if current_user.currency == '₹' or not current_user.currency %}selected{% endif %}>₹ INR</option>
+                <option value="Rs." {% if current_user.currency == 'Rs.' %}selected{% endif %}>Rs. PKR</option>
+                <option value="$" {% if current_user.currency == '$' %}selected{% endif %}>$ USD</option>
+                <option value="€" {% if current_user.currency == '€' %}selected{% endif %}>€ EUR</option>
+                <option value="£" {% if current_user.currency == '£' %}selected{% endif %}>£ GBP</option>
+                <option value="AED" {% if current_user.currency == 'AED' %}selected{% endif %}>AED</option>
+                <option value="SAR" {% if current_user.currency == 'SAR' %}selected{% endif %}>SAR</option>
+            </select>
+        </div>
+        {% endif %}
+
+        <!-- Floating Dark/Light Mode Switcher -->
+        <button class="theme-toggle" id="themeToggleBtn" title="Toggle Dark/Light Mode (Ctrl+Shift+D)">
+            <i class="fas fa-moon"></i>
+            <i class="fas fa-sun"></i>
+        </button>
+    </div>
 
     {% if current_user.is_authenticated %}
     <!-- Mobile Hamburger Toggle -->
@@ -62,6 +81,19 @@
                 </a>
             </li>
             <li>
+                <a href="{{ url_for('features.budgets_page') }}" class="{% if request.endpoint and request.endpoint.startswith('features.budgets') %}active{% endif %}">
+                    <i class="fas fa-bullseye"></i>
+                    <span>Budgets & Caps</span>
+                    <span class="menu-badge" style="background: linear-gradient(135deg, #F59E0B, #F97316);">GOALS</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('features.subscriptions_page') }}" class="{% if request.endpoint and request.endpoint.startswith('features.subscriptions') %}active{% endif %}">
+                    <i class="fas fa-rotate"></i>
+                    <span>Subscriptions</span>
+                </a>
+            </li>
+            <li>
                 <a href="{{ url_for('chatbot.index') }}" class="{% if request.endpoint and request.endpoint.startswith('chatbot.') %}active{% endif %}">
                     <i class="fas fa-brain"></i>
                     <span>AI Advisor</span>
@@ -75,9 +107,16 @@
                     <span class="menu-badge" style="background: linear-gradient(135deg, #10B981, #3B82F6);">DEALS</span>
                 </a>
             </li>
+            <li class="menu-divider"></li>
+            <li>
+                <a href="{{ url_for('features.statement_pdf') }}" target="_blank">
+                    <i class="fas fa-file-invoice"></i>
+                    <span>PDF Statement</span>
+                </a>
+            </li>
             <li>
                 <a href="{{ url_for('main.export_csv') }}">
-                    <i class="fas fa-file-export"></i>
+                    <i class="fas fa-file-csv"></i>
                     <span>Export CSV</span>
                 </a>
             </li>
@@ -94,7 +133,7 @@
 
     <!-- Main Content Area -->
     <main class="{% if current_user.is_authenticated %}main-with-sidebar{% else %}main-full{% endif %}">
-        <!-- Modern Flash Messages -->
+        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="flash-container">
@@ -115,6 +154,22 @@
     <!-- Master Scripts -->
     <script src="{{ url_for('static', filename='js/theme-toggle.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+    async function changeCurrency(newCurrency) {
+        try {
+            const res = await fetch('/api/set-currency', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ currency: newCurrency })
+            });
+            if (res.ok) {
+                location.reload();
+            }
+        } catch (e) {
+            console.error('Failed to update currency:', e);
+        }
+    }
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

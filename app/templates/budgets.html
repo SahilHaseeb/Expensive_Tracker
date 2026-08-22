@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Category Budgets & Goals - Smart Expense Tracker{% endblock %}
+
+{% block content %}
+<div class="budgets-layout animate-fade-up">
+    <!-- Header Banner -->
+    <div class="budgets-header-card glass">
+        <div class="header-icon-box" style="background: linear-gradient(135deg, #F59E0B, #F97316);">
+            <i class="fas fa-bullseye"></i>
+        </div>
+        <div>
+            <h1>Category Budgets & Spending Caps</h1>
+            <p>Set maximum monthly limits per category. We will track your progress and alert you before you overspend.</p>
+        </div>
+    </div>
+
+    <!-- Active Budgets Grid -->
+    <div class="budgets-progress-grid">
+        {% for b in budget_cards %}
+        <div class="budget-card glass card-hover {% if b.status == 'danger' %}border-danger{% elif b.status == 'warning' %}border-warning{% endif %}">
+            <div class="budget-card-header">
+                <div class="budget-title">
+                    <span class="budget-emoji">
+                        {% if b.category == 'Food' %}🍔
+                        {% elif b.category == 'Transport' %}🚗
+                        {% elif b.category == 'Rent' %}🏠
+                        {% elif b.category == 'Entertainment' %}🎮
+                        {% elif b.category == 'Shopping' %}🛍️
+                        {% elif b.category == 'Healthcare' %}💊
+                        {% elif b.category == 'Education' %}📚
+                        {% else %}📦{% endif %}
+                    </span>
+                    <h3>{{ b.category }}</h3>
+                </div>
+                <span class="status-badge status-{{ b.status }}">
+                    {% if b.status == 'danger' %}🚨 Exceeded
+                    {% elif b.status == 'warning' %}⚠️ Near Limit
+                    {% elif b.limit > 0 %}✅ On Track
+                    {% else %}No Limit{% endif %}
+                </span>
+            </div>
+
+            <div class="budget-card-body">
+                <div class="budget-stats-row">
+                    <div>
+                        <small>Spent this Month</small>
+                        <h4>{{ user_currency }}{{ b.spent }}</h4>
+                    </div>
+                    <div style="text-align: right;">
+                        <small>Monthly Cap</small>
+                        <h4>{% if b.limit > 0 %}{{ user_currency }}{{ b.limit }}{% else %}—{% endif %}</h4>
+                    </div>
+                </div>
+
+                <div class="progress-track">
+                    <div class="progress-fill {% if b.status == 'danger' %}fill-danger{% elif b.status == 'warning' %}fill-warning{% else %}fill-success{% endif %}" style="width: {{ b.percentage }}%;"></div>
+                </div>
+
+                <div class="budget-footer-row">
+                    <span>{{ b.raw_percentage }}% used</span>
+                    <span>Remaining: <strong>{{ user_currency }}{{ b.remaining }}</strong></span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Edit Budgets Form Card -->
+    <div class="budget-settings-card glass">
+        <div class="settings-header">
+            <h3><i class="fas fa-sliders text-primary"></i> Configure Monthly Limits</h3>
+            <p>Update your monthly spending thresholds for each category (leave 0 or blank for no cap).</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('features.budgets_page') }}" class="budget-form">
+            <div class="budget-inputs-grid">
+                {% for b in budget_cards %}
+                <div class="budget-input-item">
+                    <label for="limit_{{ b.category }}">
+                        {% if b.category == 'Food' %}🍔
+                        {% elif b.category == 'Transport' %}🚗
+                        {% elif b.category == 'Rent' %}🏠
+                        {% elif b.category == 'Entertainment' %}🎮
+                        {% elif b.category == 'Shopping' %}🛍️
+                        {% elif b.category == 'Healthcare' %}💊
+                        {% elif b.category == 'Education' %}📚
+                        {% else %}📦{% endif %}
+                        {{ b.category }} ({{ user_currency }})
+                    </label>
+                    <input type="number" step="100" name="limit_{{ b.category }}" id="limit_{{ b.category }}" value="{% if b.limit > 0 %}{{ b.limit }}{% endif %}" placeholder="No limit">
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="form-actions" style="margin-top: 24px;">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-floppy-disk"></i> Save All Budgets
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

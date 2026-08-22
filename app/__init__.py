@@ -18,7 +18,7 @@ def create_app():
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
 
-    from app.models import User, Expense
+    from app.models import User, Expense, Budget, Subscription
 
     with app.app_context():
         db.create_all()
@@ -35,6 +35,9 @@ def create_app():
 
     from app.shopping_routes import shopping_bp
     app.register_blueprint(shopping_bp)
+
+    from app.feature_routes import features_bp
+    app.register_blueprint(features_bp)
 
     return app
 

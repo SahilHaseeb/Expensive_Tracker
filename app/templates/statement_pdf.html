@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Statement - {{ statement_date }} - {{ current_user.username }}</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #FFFFFF;
+            color: #0F172A;
+            padding: 40px;
+            max-width: 900px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        .statement-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #E2E8F0;
+            padding-bottom: 24px;
+            margin-bottom: 30px;
+        }
+
+        .brand-logo {
+            font-family: 'Outfit', sans-serif;
+            font-size: 26px;
+            font-weight: 800;
+            color: #6366F1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .statement-title-block h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            text-align: right;
+        }
+
+        .statement-title-block p {
+            font-size: 13px;
+            color: #64748B;
+            text-align: right;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .info-block small {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #64748B;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .info-block h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            color: #0F172A;
+            margin-top: 4px;
+        }
+
+        .section-heading {
+            font-family: 'Outfit', sans-serif;
+            font-size: 17px;
+            font-weight: 700;
+            margin: 24px 0 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #1E293B;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        th {
+            text-align: left;
+            background: #F1F5F9;
+            padding: 10px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #475569;
+            border-bottom: 2px solid #CBD5E1;
+        }
+
+        td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #E2E8F0;
+            font-size: 13.5px;
+        }
+
+        .category-pill {
+            padding: 3px 10px;
+            background: #EEF2FF;
+            color: #4F46E5;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .amount-col {
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .category-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        .cat-chip {
+            padding: 12px;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            background: #F8FAFC;
+        }
+
+        .cat-chip small {
+            display: block;
+            font-size: 11px;
+            color: #64748B;
+        }
+
+        .cat-chip strong {
+            font-family: 'Outfit', sans-serif;
+            font-size: 15px;
+        }
+
+        .health-summary-box {
+            background: #F0FDF4;
+            border: 1px solid #BBF7D0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .health-score-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #10B981;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 800;
+            font-family: 'Outfit', sans-serif;
+            flex-shrink: 0;
+        }
+
+        .health-text h4 {
+            font-size: 16px;
+            color: #166534;
+        }
+
+        .health-text p {
+            font-size: 13px;
+            color: #15803D;
+        }
+
+        .print-btn-bar {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-print {
+            padding: 12px 24px;
+            background: #6366F1;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        @media print {
+            .print-btn-bar { display: none; }
+            body { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Printable Bar -->
+    <div class="print-btn-bar">
+        <button class="btn-print" onclick="window.print()">
+            <i class="fas fa-print"></i> Print / Save as PDF
+        </button>
+    </div>
+
+    <!-- Header -->
+    <div class="statement-header">
+        <div>
+            <div class="brand-logo">
+                <i class="fas fa-wallet"></i> ExpenseAI
+            </div>
+            <p style="font-size: 13px; color: #64748B; margin-top: 4px;">Smart Expense Tracker & AI Intelligence</p>
+        </div>
+        <div class="statement-title-block">
+            <h1>MONTHLY STATEMENT</h1>
+            <p>Period: <strong>{{ statement_date }}</strong></p>
+            <p>Account: <strong>{{ current_user.username }}</strong> ({{ current_user.email }})</p>
+        </div>
+    </div>
+
+    <!-- Info Metrics Block -->
+    <div class="info-grid">
+        <div class="info-block">
+            <small>Total Spent</small>
+            <h3>{{ user_currency }}{{ total_spent }}</h3>
+        </div>
+        <div class="info-block">
+            <small>Total Transactions</small>
+            <h3>{{ expenses|length }}</h3>
+        </div>
+        <div class="info-block">
+            <small>Financial Health Grade</small>
+            <h3>{{ health_score.grade }}</h3>
+        </div>
+    </div>
+
+    <!-- Health Rating -->
+    <div class="health-summary-box">
+        <div class="health-score-circle">
+            {{ health_score.score }}
+        </div>
+        <div class="health-text">
+            <h4>Financial Health Score: {{ health_score.score }}/100 ({{ health_score.tier }})</h4>
+            <p>{{ health_score.message }}</p>
+        </div>
+    </div>
+
+    <!-- Category Summary -->
+    <div class="section-heading">
+        <i class="fas fa-chart-pie" style="color: #6366F1;"></i> Category Summary
+    </div>
+    <div class="category-summary-grid">
+        {% for cat, amt in cat_totals.items() %}
+        <div class="cat-chip">
+            <small>{{ cat }}</small>
+            <strong>{{ user_currency }}{{ amt }}</strong>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Transactions List -->
+    <div class="section-heading">
+        <i class="fas fa-list" style="color: #6366F1;"></i> Itemized Transactions
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Category</th>
+                <th>Description / Note</th>
+                <th style="text-align: right;">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in expenses %}
+            <tr>
+                <td>{{ e.date.strftime('%d %b %Y') }}</td>
+                <td><span class="category-pill">{{ e.category }}</span></td>
+                <td>{{ e.note or '—' }}</td>
+                <td style="text-align: right;" class="amount-col">{{ user_currency }}{{ e.amount }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" style="text-align: center; color: #94A3B8; padding: 20px;">No transactions recorded this period.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div style="text-align: center; font-size: 12px; color: #94A3B8; border-top: 1px solid #E2E8F0; padding-top: 20px; margin-top: 40px;">
+        Generated automatically by ExpenseAI Smart Expense Tracker • {{ current_user.email }}
+    </div>
+</body>
+</html>

@@ -7,69 +7,167 @@
     <div class="welcome-section">
         <div>
             <h1>Financial Dashboard</h1>
-            <p>Welcome back, <strong>{{ current_user.username }}</strong>! Here is your spending overview.</p>
+            <p>Welcome back, <strong>{{ current_user.username }}</strong>! Here is your spending intelligence.</p>
         </div>
-        {% if predicted %}
-        <div class="prediction-badge animate-pulse-glow">
-            <i class="fas fa-brain"></i>
-            <div>
-                <small>AI Prediction</small>
-                <strong>₹{{ predicted }}</strong>
-                <span>Estimated Next Month</span>
+        
+        <div class="header-action-pills">
+            {% if predicted %}
+            <div class="prediction-badge animate-pulse-glow">
+                <i class="fas fa-brain"></i>
+                <div>
+                    <small>AI Prediction</small>
+                    <strong>{{ user_currency }}{{ predicted }}</strong>
+                    <span>Next Month</span>
+                </div>
             </div>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
 
-    <!-- 4 Key Stat Metric Cards -->
-    <div class="stats-grid">
-        <div class="stat-card glass card-hover delay-1">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #6366F1, #8B5CF6);">
-                <i class="fas fa-wallet"></i>
-            </div>
-            <div class="stat-info">
-                <small>Total This Month</small>
-                <h2>₹{{ total_this_month }}</h2>
+    <!-- Upcoming Bills & Subscription Alert Banner (if due) -->
+    {% if upcoming_bills %}
+    <div class="bill-alert-banner glass animate-fade-up">
+        <div class="alert-icon-box">
+            <i class="fas fa-bell-ring"></i>
+        </div>
+        <div class="alert-info">
+            <h4>Upcoming Bills Due Soon</h4>
+            <div class="upcoming-bills-chips">
+                {% for b in upcoming_bills %}
+                <span class="bill-chip {% if b.is_urgent %}urgent{% endif %}">
+                    <strong>{{ b.name }}</strong>: {{ user_currency }}{{ b.amount }} 
+                    <small>({% if b.days_left == 0 %}Due Today!{% elif b.days_left == 1 %}Due Tomorrow{% else %}Due in {{ b.days_left }} days{% endif %})</small>
+                </span>
+                {% endfor %}
             </div>
         </div>
-        
-        <div class="stat-card glass card-hover delay-2">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #EC4899, #F43F5E);">
-                <i class="fas fa-receipt"></i>
+        <a href="{{ url_for('features.subscriptions_page') }}" class="btn-secondary" style="padding: 8px 16px; font-size: 12.5px;">
+            Manage Subscriptions
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- 4 Key Stat Metric Cards + Financial Health Score Card -->
+    <div class="dashboard-top-grid">
+        <!-- 4 Metric Cards Grid -->
+        <div class="stats-grid">
+            <div class="stat-card glass card-hover delay-1">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #6366F1, #8B5CF6);">
+                    <i class="fas fa-wallet"></i>
+                </div>
+                <div class="stat-info">
+                    <small>Total Spent This Month</small>
+                    <h2>{{ user_currency }}{{ total_this_month }}</h2>
+                </div>
             </div>
-            <div class="stat-info">
-                <small>Monthly Transactions</small>
-                <h2>{{ transaction_count }}</h2>
+            
+            <div class="stat-card glass card-hover delay-2">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #EC4899, #F43F5E);">
+                    <i class="fas fa-receipt"></i>
+                </div>
+                <div class="stat-info">
+                    <small>Monthly Transactions</small>
+                    <h2>{{ transaction_count }}</h2>
+                </div>
+            </div>
+            
+            <div class="stat-card glass card-hover delay-3">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #3B82F6, #06B6D4);">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="stat-info">
+                    <small>Average Spend</small>
+                    <h2>{{ user_currency }}{{ avg_transaction }}</h2>
+                </div>
+            </div>
+            
+            <div class="stat-card glass card-hover delay-4">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #10B981, #14B8A6);">
+                    <i class="fas fa-tags"></i>
+                </div>
+                <div class="stat-info">
+                    <small>Active Categories</small>
+                    <h2>{{ category_totals|length }}</h2>
+                </div>
             </div>
         </div>
-        
-        <div class="stat-card glass card-hover delay-3">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #3B82F6, #06B6D4);">
-                <i class="fas fa-chart-line"></i>
+
+        <!-- Financial Health Score Card -->
+        <div class="health-score-card glass card-hover">
+            <div class="health-score-header">
+                <h3><i class="fas fa-shield-heart text-success"></i> Financial Health</h3>
+                <span class="health-grade-pill" style="background: rgba(16, 185, 129, 0.15); color: {{ health_score.color }};">
+                    {{ health_score.grade }}
+                </span>
             </div>
-            <div class="stat-info">
-                <small>Average Spend</small>
-                <h2>₹{{ avg_transaction }}</h2>
-            </div>
-        </div>
-        
-        <div class="stat-card glass card-hover delay-4">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #10B981, #14B8A6);">
-                <i class="fas fa-tags"></i>
-            </div>
-            <div class="stat-info">
-                <small>Categories Active</small>
-                <h2>{{ category_totals|length }}</h2>
+            <div class="health-gauge-body">
+                <div class="score-circle-wrapper">
+                    <svg class="score-svg" viewBox="0 0 100 100">
+                        <circle class="score-bg-circle" cx="50" cy="50" r="42"></circle>
+                        <circle class="score-progress-circle" cx="50" cy="50" r="42" style="stroke: {{ health_score.color }}; stroke-dashoffset: calc(264 - (264 * {{ health_score.score }}) / 100);"></circle>
+                    </svg>
+                    <div class="score-inner-text">
+                        <span class="score-num">{{ health_score.score }}</span>
+                        <small>/100</small>
+                    </div>
+                </div>
+                <div class="health-tips">
+                    <p class="health-msg">{{ health_score.message }}</p>
+                    {% if health_score.tips %}
+                    <ul class="health-tip-list">
+                        {% for tip in health_score.tips %}
+                        <li><i class="fas fa-check-circle" style="color: {{ health_score.color }};"></i> {{ tip }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- Category Budget Progress Section (If user has set budgets) -->
+    {% if budget_progress %}
+    <div class="budget-overview-card glass card-hover animate-fade-up">
+        <div class="card-section-header">
+            <h3><i class="fas fa-bullseye text-warning"></i> Category Budget Limits</h3>
+            <a href="{{ url_for('features.budgets_page') }}" class="btn-text-link">
+                Adjust Limits <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+        <div class="budget-bars-grid">
+            {% for b in budget_progress %}
+            <div class="budget-bar-item">
+                <div class="budget-bar-labels">
+                    <span class="budget-cat-title">
+                        {% if b.category == 'Food' %}🍔
+                        {% elif b.category == 'Transport' %}🚗
+                        {% elif b.category == 'Rent' %}🏠
+                        {% elif b.category == 'Entertainment' %}🎮
+                        {% elif b.category == 'Shopping' %}🛍️
+                        {% elif b.category == 'Healthcare' %}💊
+                        {% elif b.category == 'Education' %}📚
+                        {% else %}📦{% endif %}
+                        {{ b.category }}
+                    </span>
+                    <span class="budget-numbers">
+                        <strong>{{ user_currency }}{{ b.spent }}</strong> / {{ user_currency }}{{ b.limit }} ({{ b.raw_percentage }}%)
+                    </span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill {% if b.is_over %}fill-danger{% elif b.is_warning %}fill-warning{% else %}fill-success{% endif %}" style="width: {{ b.percentage }}%;"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Charts Section -->
     <div class="charts-grid">
         {% if pie_chart_json %}
         <div class="chart-card glass card-hover">
             <div class="chart-header">
-                <h3><i class="fas fa-chart-pie"></i> Category Distribution</h3>
+                <h3><i class="fas fa-chart-pie"></i> Category Breakdown</h3>
             </div>
             <div id="pie-chart" class="chart-container"></div>
         </div>
@@ -89,9 +187,14 @@
     <div class="table-card glass card-hover">
         <div class="table-header">
             <h3><i class="fas fa-clock-rotate-left"></i> Recent Transactions</h3>
-            <a href="{{ url_for('main.add_expense') }}" class="btn-add">
-                <i class="fas fa-plus"></i> Add Expense
-            </a>
+            <div class="table-actions-group">
+                <button class="btn-voice-quick" id="dashboardVoiceBtn" title="Speak to Add Expense (Voice Input)">
+                    <i class="fas fa-microphone"></i> <span>Voice Input</span>
+                </button>
+                <a href="{{ url_for('main.add_expense') }}" class="btn-add">
+                    <i class="fas fa-plus"></i> Add Expense
+                </a>
+            </div>
         </div>
         <div class="table-responsive">
             <table>
@@ -121,7 +224,7 @@
                                 {{ expense.category }}
                             </span>
                         </td>
-                        <td class="amount">₹{{ expense.amount }}</td>
+                        <td class="amount">{{ user_currency }}{{ expense.amount }}</td>
                         <td>{{ expense.note or '—' }}</td>
                         <td style="text-align: right;">
                             <a href="{{ url_for('main.edit_expense', id=expense.id) }}" class="btn-icon" title="Edit Expense">
@@ -148,10 +251,35 @@
         </div>
     </div>
 </div>
+
+<!-- Voice Expense Modal -->
+<div class="voice-modal-overlay" id="voiceModal" style="display: none;">
+    <div class="voice-modal-card glass animate-scale-in">
+        <div class="voice-modal-header">
+            <h3><i class="fas fa-microphone text-primary"></i> Voice Expense Input</h3>
+            <button class="close-modal-btn" onclick="closeVoiceModal()">&times;</button>
+        </div>
+        <div class="voice-modal-body">
+            <div class="mic-pulse-wrapper" id="micPulse">
+                <i class="fas fa-microphone-lines"></i>
+            </div>
+            <p class="voice-status-text" id="voiceStatus">Click "Start Speaking" and speak your expense naturally...</p>
+            <p class="voice-example-text">Example: <em>"Spent 1500 on groceries at supermarket"</em> or <em>"Paid 400 for Uber ride"</em></p>
+            <div class="voice-transcript-box" id="voiceTranscript"></div>
+        </div>
+        <div class="voice-modal-actions">
+            <button class="btn-secondary" onclick="closeVoiceModal()">Cancel</button>
+            <button class="btn-primary" id="startVoiceBtn" onclick="toggleVoiceRecording()">
+                <i class="fas fa-play"></i> Start Speaking
+            </button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script src="{{ url_for('static', filename='js/voice-expense.js') }}"></script>
 
 {% if pie_chart_json %}
 <script id="pie-chart-data" type="application/json">

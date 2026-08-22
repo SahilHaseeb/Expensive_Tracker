@@ -1,9 +1,10 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.models import Expense
+from app.models import Expense, Budget, Subscription
 from app.ml_utils import predict_next_month, delete_model
-from datetime import datetime
+from app.analytics import calculate_financial_health_score
+from datetime import datetime, date, timedelta
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
@@ -22,13 +23,14 @@ def index():
 @login_required
 def dashboard():
     expenses = Expense.query.filter_by(user_id=current_user.id).order_by(Expense.date.desc()).all()
+    user_currency = current_user.currency or '₹'
 
     # Statistics
     this_month = datetime.now().month
     this_year = datetime.now().year
     
     monthly_expenses = [e for e in expenses if e.date.month == this_month and e.date.year == this_year]
-    total_this_month = sum(e.amount for e in monthly_expenses)
+    total_this_month = round(sum(e.amount for e in monthly_expenses), 2)
     
     # Category totals for cards
     df = pd.DataFrame([(e.amount, e.category, e.date) for e in expenses], 
@@ -48,9 +50,9 @@ def dashboard():
             fig_pie.update_layout(
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(0,0,0,0)',
-                font=dict(family='Poppins, sans-serif', color='#6c757d'),
+                font=dict(family='Plus Jakarta Sans, sans-serif', color='#64748b'),
                 margin=dict(t=30, b=0, l=0, r=0),
-                height=350
+                height=340
             )
             pie_chart_json = json.dumps(fig_pie, cls=plotly.utils.PlotlyJSONEncoder)
     
@@ -67,18 +69,18 @@ def dashboard():
             x=monthly_total['month_year'], 
             y=monthly_total['amount'],
             mode='lines+markers',
-            line=dict(color='#6C63FF', width=3),
-            marker=dict(size=10, color='#6C63FF', line=dict(color='white', width=2)),
+            line=dict(color='#6366F1', width=3),
+            marker=dict(size=9, color='#6366F1', line=dict(color='white', width=2)),
             fill='tozeroy',
-            fillcolor='rgba(108, 99, 255, 0.1)',
-            name='Monthly Spending'
+            fillcolor='rgba(99, 102, 241, 0.12)',
+            name='Monthly Spend'
         ))
         fig_line.update_layout(
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(family='Poppins, sans-serif', color='#6c757d'),
+            font=dict(family='Plus Jakarta Sans, sans-serif', color='#64748b'),
             margin=dict(t=30, b=0, l=0, r=0),
-            height=350,
+            height=340,
             xaxis=dict(showgrid=False),
             yaxis=dict(showgrid=True, gridcolor='rgba(0,0,0,0.05)')
         )
@@ -94,10 +96,43 @@ def dashboard():
     transaction_count = len(monthly_expenses)
     
     # Average transaction
-    avg_transaction = round(total_this_month / transaction_count, 2) if transaction_count > 0 else 0
+    avg_transaction = round(total_this_month / transaction_count, 2) if transaction_count > 0 else 0.0
     
     # ML Prediction
     predicted = predict_next_month(current_user.id, expenses)
+
+    # 1. Financial Health Score
+    health_score = calculate_financial_health_score(current_user.id)
+
+    # 2. Category Budgets for Dashboard Widget
+    user_budgets = {b.category: b.monthly_limit for b in Budget.query.filter_by(user_id=current_user.id).all()}
+    budget_progress = []
+    for cat, limit in user_budgets.items():
+        spent = float(category_totals.get(cat, 0.0))
+        pct = round((spent / limit * 100), 1) if limit > 0 else 0
+        budget_progress.append({
+            "category": cat,
+            "limit": limit,
+            "spent": spent,
+            "percentage": min(100, pct),
+            "raw_percentage": pct,
+            "is_over": spent > limit,
+            "is_warning": spent >= 0.75 * limit and spent <= limit
+        })
+
+    # 3. Upcoming Bill Reminders (due in next 5 days)
+    today = date.today()
+    all_subs = Subscription.query.filter_by(user_id=current_user.id).all()
+    upcoming_bills = []
+    for s in all_subs:
+        days_left = (s.next_due_date - today).days
+        if 0 <= days_left <= 5:
+            upcoming_bills.append({
+                "name": s.name,
+                "amount": s.amount,
+                "days_left": days_left,
+                "is_urgent": days_left <= 2
+            })
     
     return render_template('dashboard.html',
                            total_this_month=total_this_month,
@@ -107,7 +142,11 @@ def dashboard():
                            pie_chart_json=pie_chart_json,
                            line_chart_json=line_chart_json,
                            predicted=predicted,
-                           expenses=expenses[:10])  # Last 10 transactions
+                           health_score=health_score,
+                           budget_progress=budget_progress,
+                           upcoming_bills=upcoming_bills,
+                           user_currency=user_currency,
+                           expenses=expenses[:10])
 
 @main.route('/add', methods=['GET', 'POST'])
 @login_required
@@ -126,7 +165,7 @@ def add_expense():
         delete_model(current_user.id)
         flash('Expense added successfully! ✅', 'success')
         return redirect(url_for('main.dashboard'))
-    return render_template('add_expense.html')
+    return render_template('add_expense.html', user_currency=current_user.currency or '₹')
 
 @main.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -145,7 +184,7 @@ def edit_expense(id):
         delete_model(current_user.id)
         flash('Expense updated! ✏️', 'success')
         return redirect(url_for('main.dashboard'))
-    return render_template('edit_expense.html', expense=expense)
+    return render_template('edit_expense.html', expense=expense, user_currency=current_user.currency or '₹')
 
 @main.route('/delete/<int:id>')
 @login_required

@@ -1,19 +1,52 @@
 {% extends "base.html" %}
-{% block title %}Add New Expense - Smart Expense Tracker{% endblock %}
+{% block title %}Add Expense - Smart Expense Tracker{% endblock %}
 
 {% block content %}
 <div class="form-container animate-fade-up">
+    <!-- Smart AI Capture Section -->
+    <div class="smart-capture-grid">
+        <!-- Receipt Scanner Card -->
+        <div class="smart-capture-card glass" id="receiptDropzone">
+            <div class="capture-icon" style="background: linear-gradient(135deg, #8B5CF6, #EC4899);">
+                <i class="fas fa-camera"></i>
+            </div>
+            <div class="capture-text">
+                <h4>📸 AI Receipt Scanner</h4>
+                <p>Drop receipt photo or click to upload. Gemini Vision will auto-fill the form!</p>
+            </div>
+            <input type="file" id="receiptFileInput" accept="image/*" style="display: none;">
+            <button type="button" class="btn-secondary btn-sm" onclick="document.getElementById('receiptFileInput').click()">
+                <i class="fas fa-upload"></i> Upload Slip
+            </button>
+        </div>
+
+        <!-- Voice Input Card -->
+        <div class="smart-capture-card glass" onclick="openVoiceModalDirect()">
+            <div class="capture-icon" style="background: linear-gradient(135deg, #10B981, #3B82F6);">
+                <i class="fas fa-microphone"></i>
+            </div>
+            <div class="capture-text">
+                <h4>🎙️ Voice-to-Expense</h4>
+                <p>Tap and speak naturally: <em>"Spent 800 on groceries"</em></p>
+            </div>
+            <button type="button" class="btn-secondary btn-sm">
+                <i class="fas fa-play"></i> Speak
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Expense Form Card -->
     <div class="form-card glass">
         <div class="form-header">
             <i class="fas fa-circle-plus"></i>
             <h2>Record New Expense</h2>
-            <p>Enter your spending details to keep your budget on track</p>
+            <p id="formSubheader">Enter details manually or use AI Scan above</p>
         </div>
         
-        <form method="POST" class="expense-form">
+        <form method="POST" class="expense-form" id="expenseForm">
             <div class="form-row">
                 <div class="input-group">
-                    <label for="amount"><i class="fas fa-coins"></i> Amount (₹)</label>
+                    <label for="amount"><i class="fas fa-coins"></i> Amount ({{ user_currency }})</label>
                     <input type="number" step="0.01" name="amount" id="amount" placeholder="0.00" required autofocus>
                 </div>
                 
@@ -41,7 +74,7 @@
                 
                 <div class="input-group">
                     <label for="note"><i class="fas fa-pen-to-square"></i> Description / Note</label>
-                    <input type="text" name="note" id="note" placeholder="e.g. Grocery store, Uber ride...">
+                    <input type="text" name="note" id="note" placeholder="e.g. Grocery store, Uber ride, Dinner...">
                 </div>
             </div>
             
@@ -49,11 +82,40 @@
                 <a href="{{ url_for('main.dashboard') }}" class="btn-secondary">
                     <i class="fas fa-xmark"></i> Cancel
                 </a>
-                <button type="submit" class="btn-primary">
+                <button type="submit" class="btn-primary" id="saveExpenseBtn">
                     <i class="fas fa-check"></i> Save Expense
                 </button>
             </div>
         </form>
     </div>
 </div>
+
+<!-- Voice Modal for Add Page -->
+<div class="voice-modal-overlay" id="voiceModal" style="display: none;">
+    <div class="voice-modal-card glass animate-scale-in">
+        <div class="voice-modal-header">
+            <h3><i class="fas fa-microphone text-primary"></i> Voice Expense Input</h3>
+            <button class="close-modal-btn" onclick="closeVoiceModal()">&times;</button>
+        </div>
+        <div class="voice-modal-body">
+            <div class="mic-pulse-wrapper" id="micPulse">
+                <i class="fas fa-microphone-lines"></i>
+            </div>
+            <p class="voice-status-text" id="voiceStatus">Click "Start Speaking" and speak your expense naturally...</p>
+            <p class="voice-example-text">Example: <em>"Spent 1500 on dinner with friends"</em></p>
+            <div class="voice-transcript-box" id="voiceTranscript"></div>
+        </div>
+        <div class="voice-modal-actions">
+            <button class="btn-secondary" onclick="closeVoiceModal()">Cancel</button>
+            <button class="btn-primary" id="startVoiceBtn" onclick="toggleVoiceRecording()">
+                <i class="fas fa-play"></i> Start Speaking
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/receipt-scanner.js') }}"></script>
+<script src="{{ url_for('static', filename='js/voice-expense.js') }}"></script>
 {% endblock %}

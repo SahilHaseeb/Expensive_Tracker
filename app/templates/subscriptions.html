@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Recurring Subscriptions & Bills - Smart Expense Tracker{% endblock %}
+
+{% block content %}
+<div class="subscriptions-layout animate-fade-up">
+    <!-- Header Card -->
+    <div class="subscriptions-header-card glass">
+        <div class="header-icon-box" style="background: linear-gradient(135deg, #EC4899, #8B5CF6);">
+            <i class="fas fa-rotate"></i>
+        </div>
+        <div class="sub-header-text">
+            <h1>Recurring Subscriptions & Bills</h1>
+            <p>Track your recurring memberships, utility bills, and streaming services so you never miss a payment.</p>
+        </div>
+        <div class="sub-total-badge">
+            <small>Total Monthly Cost</small>
+            <h3>{{ user_currency }}{{ total_monthly }}<small>/mo</small></h3>
+        </div>
+    </div>
+
+    <!-- Main Content Layout -->
+    <div class="subscriptions-grid-layout">
+        <!-- Add Subscription Form Card -->
+        <div class="form-card glass sub-form-card">
+            <div class="form-header" style="text-align: left; margin-bottom: 24px;">
+                <h3><i class="fas fa-plus-circle text-primary"></i> Add Subscription</h3>
+                <p>Track a new recurring payment</p>
+            </div>
+
+            <form method="POST" action="{{ url_for('features.subscriptions_page') }}">
+                <div class="input-group">
+                    <label><i class="fas fa-tag"></i> Service Name</label>
+                    <input type="text" name="name" placeholder="e.g. Netflix, Gym, WiFi, Electricity" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="input-group">
+                        <label><i class="fas fa-coins"></i> Amount ({{ user_currency }})</label>
+                        <input type="number" step="0.01" name="amount" placeholder="0.00" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label><i class="fas fa-folder"></i> Category</label>
+                        <select name="category" required>
+                            <option value="Entertainment">🎮 Entertainment</option>
+                            <option value="Rent">🏠 Rent & Utilities</option>
+                            <option value="Healthcare">💊 Health & Fitness</option>
+                            <option value="Education">📚 Education / SaaS</option>
+                            <option value="Other">📦 Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="input-group">
+                        <label><i class="fas fa-arrows-rotate"></i> Billing Cycle</label>
+                        <select name="billing_cycle">
+                            <option value="Monthly">Monthly</option>
+                            <option value="Yearly">Yearly</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label><i class="fas fa-calendar"></i> Next Due Date</label>
+                        <input type="date" name="next_due_date" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 10px;">
+                    <i class="fas fa-plus"></i> Add Subscription
+                </button>
+            </form>
+        </div>
+
+        <!-- Subscriptions List Cards -->
+        <div class="sub-list-container">
+            <h3><i class="fas fa-list-check text-primary"></i> Active Subscriptions ({{ subscriptions|length }})</h3>
+            
+            <div class="sub-cards-list">
+                {% for s in subscriptions %}
+                <div class="sub-item-card glass card-hover {% if s.is_urgent %}urgent-sub-card{% endif %}">
+                    <div class="sub-icon-avatar">
+                        {% if 'netflix' in s.name|lower %}🎬
+                        {% elif 'spotify' in s.name|lower or 'music' in s.name|lower %}🎵
+                        {% elif 'gym' in s.name|lower or 'fitness' in s.name|lower %}🏋️
+                        {% elif 'wifi' in s.name|lower or 'internet' in s.name|lower %}🌐
+                        {% elif 'electric' in s.name|lower or 'bill' in s.name|lower %}⚡
+                        {% else %}💳{% endif %}
+                    </div>
+
+                    <div class="sub-details">
+                        <h4>{{ s.name }}</h4>
+                        <span class="sub-meta"><i class="fas fa-tag"></i> {{ s.category }} • {{ s.billing_cycle }}</span>
+                    </div>
+
+                    <div class="sub-due-info">
+                        <span class="sub-countdown {% if s.is_urgent %}countdown-urgent{% endif %}">
+                            {% if s.days_left < 0 %}Overdue by {{ s.days_left|abs }} days
+                            {% elif s.days_left == 0 %}Due Today! 🚨
+                            {% elif s.days_left == 1 %}Due Tomorrow ⚠️
+                            {% else %}Due in {{ s.days_left }} days{% endif %}
+                        </span>
+                        <small>Next: {{ s.next_due_date.strftime('%d %b %Y') }}</small>
+                    </div>
+
+                    <div class="sub-price">
+                        <strong>{{ user_currency }}{{ s.amount }}</strong>
+                    </div>
+
+                    <form method="POST" action="{{ url_for('features.delete_subscription', id=s.id) }}" onsubmit="return confirm('Delete this subscription?')">
+                        <button type="submit" class="btn-icon delete" title="Delete Subscription">
+                            <i class="fas fa-trash-can"></i>
+                        </button>
+                    </form>
+                </div>
+                {% else %}
+                <div class="empty-sub-card glass">
+                    <i class="fas fa-receipt"></i>
+                    <h4>No active subscriptions</h4>
+                    <p>Add your Netflix, Gym, Spotify, or utility bills on the left to track upcoming due dates.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
