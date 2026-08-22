@@ -6,12 +6,12 @@
     <!-- Shopping Header -->
     <div class="shopping-header-card glass">
         <div class="shopping-intro">
-            <div class="shopping-icon-badge">
+            <div class="shopping-icon-badge" style="background: linear-gradient(135deg, #10B981, #3B82F6);">
                 <i class="fas fa-tags"></i>
             </div>
             <div>
                 <h1>Live Shopping Price Finder & Deals</h1>
-                <p>Compare real-time product prices and discounts across top retailers (Amazon, Flipkart, Walmart, eBay) to save before you buy.</p>
+                <p>Compare real-time product prices, discounts, and store offers across top retailers (Amazon, Flipkart, Sephora, Daraz, Walmart, eBay) with 1-click direct store access.</p>
             </div>
         </div>
 
@@ -19,8 +19,8 @@
         <form method="GET" action="{{ url_for('shopping.index') }}" class="shopping-search-form">
             <div class="search-input-group">
                 <i class="fas fa-magnifying-glass search-icon"></i>
-                <input type="text" name="q" value="{{ current_query }}" placeholder="Search products, brands, models (e.g. Sony WH-1000XM5, iPhone 15, Running Shoes)..." required autocomplete="off">
-                <select name="sort" class="sort-select">
+                <input type="text" name="q" value="{{ current_query }}" placeholder="Search products, makeup, gadgets, shoes, electronics (e.g. Makeup kit, iPhone 15, Running shoes)..." required autocomplete="off">
+                <select name="sort" class="sort-select" onchange="this.form.submit()">
                     <option value="price_low" {% if current_sort == 'price_low' %}selected{% endif %}>💰 Lowest Price First</option>
                     <option value="rating" {% if current_sort == 'rating' %}selected{% endif %}>⭐ Highest Rated</option>
                     <option value="price_high" {% if current_sort == 'price_high' %}selected{% endif %}>💎 Premium First</option>
@@ -33,12 +33,15 @@
 
         <!-- Quick Search Filter Pills -->
         <div class="quick-category-pills">
-            <span class="pills-label"><i class="fas fa-fire"></i> Popular:</span>
-            <a href="{{ url_for('shopping.index', q='wireless earbuds') }}" class="category-pill {% if current_query == 'wireless earbuds' %}active{% endif %}">🎧 Wireless Earbuds</a>
-            <a href="{{ url_for('shopping.index', q='macbook laptop') }}" class="category-pill {% if current_query == 'macbook laptop' %}active{% endif %}">💻 Laptops</a>
-            <a href="{{ url_for('shopping.index', q='smartphones 5g') }}" class="category-pill {% if current_query == 'smartphones 5g' %}active{% endif %}">📱 5G Phones</a>
-            <a href="{{ url_for('shopping.index', q='running shoes') }}" class="category-pill {% if current_query == 'running shoes' %}active{% endif %}">👟 Running Shoes</a>
-            <a href="{{ url_for('shopping.index', q='smart watch') }}" class="category-pill {% if current_query == 'smart watch' %}active{% endif %}">⌚ Smart Watches</a>
+            <span class="pills-label"><i class="fas fa-fire text-warning"></i> Popular:</span>
+            <a href="{{ url_for('shopping.index', q='makeup kit', sort=current_sort) }}" class="category-pill {% if 'makeup' in current_query|lower %}active{% endif %}">💄 Makeup & Beauty</a>
+            <a href="{{ url_for('shopping.index', q='perfume', sort=current_sort) }}" class="category-pill {% if 'perfume' in current_query|lower %}active{% endif %}">🧴 Perfumes</a>
+            <a href="{{ url_for('shopping.index', q='wireless earbuds', sort=current_sort) }}" class="category-pill {% if 'earbud' in current_query|lower %}active{% endif %}">🎧 Earbuds</a>
+            <a href="{{ url_for('shopping.index', q='macbook laptop', sort=current_sort) }}" class="category-pill {% if 'laptop' in current_query|lower %}active{% endif %}">💻 Laptops</a>
+            <a href="{{ url_for('shopping.index', q='smartphones 5g', sort=current_sort) }}" class="category-pill {% if 'phone' in current_query|lower %}active{% endif %}">📱 Phones</a>
+            <a href="{{ url_for('shopping.index', q='running shoes', sort=current_sort) }}" class="category-pill {% if 'shoe' in current_query|lower %}active{% endif %}">👟 Shoes</a>
+            <a href="{{ url_for('shopping.index', q='smart watch', sort=current_sort) }}" class="category-pill {% if 'watch' in current_query|lower %}active{% endif %}">⌚ Smart Watches</a>
+            <a href="{{ url_for('shopping.index', q='designer clothes', sort=current_sort) }}" class="category-pill {% if 'cloth' in current_query|lower or 'dress' in current_query|lower %}active{% endif %}">👗 Clothes</a>
         </div>
     </div>
 
@@ -46,6 +49,9 @@
     <div class="results-bar">
         <div class="results-count">
             <i class="fas fa-layer-group"></i> Found <strong>{{ results.products|length }}</strong> live store deals for <span class="search-term">"{{ current_query }}"</span>
+            <span class="sort-tag-info">
+                (Sorted by: {% if current_sort == 'price_low' %}Lowest Price First{% elif current_sort == 'price_high' %}Highest Price First{% elif current_sort == 'rating' %}Highest Customer Rating{% endif %})
+            </span>
         </div>
         <div class="engine-badge">
             <i class="fas fa-shield-check"></i> {{ results.source_type }}
@@ -55,15 +61,20 @@
     <!-- Product Deal Cards Grid -->
     <div class="deals-grid">
         {% for item in results.products %}
-        <div class="deal-card glass card-hover {% if item.is_best_price %}best-price-card{% endif %}">
+        <div class="deal-card glass card-hover {% if item.is_best_price %}best-price-card{% elif item.is_premium %}premium-card{% elif item.is_top_rated %}top-rated-card{% endif %}">
             <!-- Badges -->
             <div class="deal-badges-container">
                 <span class="store-badge">
                     <i class="fas fa-store"></i> {{ item.source }}
                 </span>
-                {% if item.is_best_price %}
-                <span class="best-deal-badge animate-pulse-glow">
-                    <i class="fas fa-crown"></i> Lowest Price
+                
+                {% if item.badge %}
+                <span class="best-deal-badge {% if 'Lowest' in item.badge or 'Best' in item.badge %}bg-success{% elif 'Top' in item.badge or 'Rated' in item.badge %}bg-warning{% else %}bg-primary{% endif %} animate-pulse-glow">
+                    {{ item.badge }}
+                </span>
+                {% elif item.is_lowest_price %}
+                <span class="discount-badge" style="background: rgba(16, 185, 129, 0.2); color: var(--success);">
+                    💰 Lowest Price
                 </span>
                 {% elif item.discount %}
                 <span class="discount-badge">
@@ -72,9 +83,9 @@
                 {% endif %}
             </div>
 
-            <!-- Thumbnail -->
+            <!-- Thumbnail with Fallback Safety -->
             <div class="deal-image-wrapper">
-                <img src="{{ item.thumbnail }}" alt="{{ item.title }}" loading="lazy">
+                <img src="{{ item.thumbnail }}" alt="{{ item.title }}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=500&auto=format&fit=crop&q=80'">
             </div>
 
             <!-- Content -->
@@ -98,7 +109,8 @@
                     <span class="shipping-info"><i class="fas fa-truck-fast"></i> {{ item.delivery }}</span>
                 </div>
 
-                <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer" class="btn-deal">
+                <!-- Direct Store External Link -->
+                <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer" class="btn-deal" title="Open product directly on {{ item.source }}">
                     <span>View Deal on {{ item.source }}</span>
                     <i class="fas fa-arrow-up-right-from-square"></i>
                 </a>
@@ -108,7 +120,7 @@
         <div class="no-deals-card glass">
             <i class="fas fa-magnifying-glass-arrow-right"></i>
             <h3>No matching products found</h3>
-            <p>Try searching for general product terms like "laptop", "smart phone", or "headphones".</p>
+            <p>Try searching for "makeup", "laptop", "smart phone", "shoes", or "headphones".</p>
         </div>
         {% endfor %}
     </div>
