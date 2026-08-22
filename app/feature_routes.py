@@ -143,7 +143,7 @@ def budgets_page():
             "status": status
         })
 
-    return render_template('budgets.html', budget_cards=budget_cards, user_currency=current_user.currency or '₹')
+    return render_template('budgets.html', budget_cards=budget_cards, user_currency=getattr(current_user, 'currency', None) or '₹')
 
 
 # ========== 4. RECURRING SUBSCRIPTIONS ==========
@@ -195,7 +195,7 @@ def subscriptions_page():
     return render_template('subscriptions.html', 
                            subscriptions=formatted_subs, 
                            total_monthly=round(total_monthly_recurring, 2),
-                           user_currency=current_user.currency or '₹')
+                           user_currency=getattr(current_user, 'currency', None) or '₹')
 
 
 @features_bp.route('/subscriptions/delete/<int:id>', methods=['POST'])
@@ -250,5 +250,5 @@ def statement_pdf():
                            total_spent=total_spent,
                            cat_totals=cat_totals,
                            health_score=health_score,
-                           user_currency=current_user.currency or '₹',
+                           user_currency=getattr(current_user, 'currency', None) or '₹',
                            statement_date=now.strftime('%B %Y'))

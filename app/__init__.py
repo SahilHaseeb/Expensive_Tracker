@@ -22,6 +22,18 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        # Auto-migrate existing SQLite database if currency column is missing
+        try:
+            from sqlalchemy import text, inspect
+            inspector = inspect(db.engine)
+            if 'users' in inspector.get_table_names():
+                columns = [c['name'] for c in inspector.get_columns('users')]
+                if 'currency' not in columns:
+                    with db.engine.connect() as conn:
+                        conn.execute(text("ALTER TABLE users ADD COLUMN currency VARCHAR(10) DEFAULT '₹'"))
+                        conn.commit()
+        except Exception as e:
+            print(f"Auto-migration check: {e}")
 
     # Blueprints registration
     from app.auth import auth as auth_blueprint

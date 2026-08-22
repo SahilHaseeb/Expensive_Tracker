@@ -26,7 +26,7 @@
         <div class="currency-selector-pill glass">
             <i class="fas fa-coins text-warning"></i>
             <select id="currencySelector" onchange="changeCurrency(this.value)" title="Choose preferred currency">
-                <option value="₹" {% if current_user.currency == '₹' or not current_user.currency %}selected{% endif %}>₹ INR</option>
+                <option value="₹" {% if (current_user.currency | default('₹')) == '₹' %}selected{% endif %}>₹ INR</option>
                 <option value="Rs." {% if current_user.currency == 'Rs.' %}selected{% endif %}>Rs. PKR</option>
                 <option value="$" {% if current_user.currency == '$' %}selected{% endif %}>$ USD</option>
                 <option value="€" {% if current_user.currency == '€' %}selected{% endif %}>€ EUR</option>

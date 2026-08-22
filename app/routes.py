@@ -23,11 +23,12 @@ def index():
 @login_required
 def dashboard():
     expenses = Expense.query.filter_by(user_id=current_user.id).order_by(Expense.date.desc()).all()
-    user_currency = current_user.currency or '₹'
+    user_currency = getattr(current_user, 'currency', None) or '₹'
 
     # Statistics
-    this_month = datetime.now().month
-    this_year = datetime.now().year
+    now = datetime.now()
+    this_month = now.month
+    this_year = now.year
     
     monthly_expenses = [e for e in expenses if e.date.month == this_month and e.date.year == this_year]
     total_this_month = round(sum(e.amount for e in monthly_expenses), 2)
@@ -125,7 +126,8 @@ def dashboard():
     all_subs = Subscription.query.filter_by(user_id=current_user.id).all()
     upcoming_bills = []
     for s in all_subs:
-        days_left = (s.next_due_date - today).days
+        due_date = datetime.strptime(str(s.next_due_date), '%Y-%m-%d').date() if isinstance(s.next_due_date, str) else s.next_due_date
+        days_left = (due_date - today).days
         if 0 <= days_left <= 5:
             upcoming_bills.append({
                 "name": s.name,
@@ -165,7 +167,7 @@ def add_expense():
         delete_model(current_user.id)
         flash('Expense added successfully! ✅', 'success')
         return redirect(url_for('main.dashboard'))
-    return render_template('add_expense.html', user_currency=current_user.currency or '₹')
+    return render_template('add_expense.html', user_currency=getattr(current_user, 'currency', None) or '₹')
 
 @main.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -184,7 +186,7 @@ def edit_expense(id):
         delete_model(current_user.id)
         flash('Expense updated! ✏️', 'success')
         return redirect(url_for('main.dashboard'))
-    return render_template('edit_expense.html', expense=expense, user_currency=current_user.currency or '₹')
+    return render_template('edit_expense.html', expense=expense, user_currency=getattr(current_user, 'currency', None) or '₹')
 
 @main.route('/delete/<int:id>')
 @login_required
