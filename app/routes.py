@@ -1,9 +1,10 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.models import Expense, Budget, Subscription
+from app.models import Expense, Budget, Subscription, User
 from app.ml_utils import predict_next_month, delete_model
 from app.analytics import calculate_financial_health_score
+from app.db_sync import save_db_backup
 from datetime import datetime, date, timedelta
 import pandas as pd
 import plotly.express as px
@@ -165,6 +166,13 @@ def add_expense():
         db.session.add(expense)
         db.session.commit()
         delete_model(current_user.id)
+        
+        # Save snapshot
+        try:
+            save_db_backup(db, User, Expense, Budget, Subscription)
+        except Exception as e:
+            print(f"Backup sync error: {e}")
+
         flash('Expense added successfully! ✅', 'success')
         return redirect(url_for('main.dashboard'))
     return render_template('add_expense.html', user_currency=getattr(current_user, 'currency', None) or '₹')
@@ -184,6 +192,12 @@ def edit_expense(id):
         expense.note = request.form.get('note', '')
         db.session.commit()
         delete_model(current_user.id)
+        
+        try:
+            save_db_backup(db, User, Expense, Budget, Subscription)
+        except Exception as e:
+            print(f"Backup sync error: {e}")
+
         flash('Expense updated! ✏️', 'success')
         return redirect(url_for('main.dashboard'))
     return render_template('edit_expense.html', expense=expense, user_currency=getattr(current_user, 'currency', None) or '₹')
@@ -198,6 +212,12 @@ def delete_expense(id):
     db.session.delete(expense)
     db.session.commit()
     delete_model(current_user.id)
+    
+    try:
+        save_db_backup(db, User, Expense, Budget, Subscription)
+    except Exception as e:
+        print(f"Backup sync error: {e}")
+
     flash('Expense deleted! 🗑️', 'success')
     return redirect(url_for('main.dashboard'))
 
@@ -234,12 +254,12 @@ def contact_submit():
     try:
         import os
         import json
-        data_dir = 'user_data'
+        data_dir = 'storage'
         os.makedirs(data_dir, exist_ok=True)
         file_path = os.path.join(data_dir, 'contact_inquiries.json')
         
         if os.path.exists(file_path):
-            with open(file_path, 'r') as f:
+            with open(file_path, 'r', encoding='utf-8') as f:
                 inquiries = json.load(f)
         else:
             inquiries = []
@@ -254,7 +274,7 @@ def contact_submit():
             'ip': request.remote_addr
         })
 
-        with open(file_path, 'w') as f:
+        with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(inquiries, f, indent=4)
 
         flash(f'Thank you {name}! Your message has been received. We will contact you at {email} shortly. ✉️', 'success')

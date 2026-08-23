@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db
-from app.models import User
+from app.models import User, Expense, Budget, Subscription
+from app.db_sync import save_db_backup
 
 auth = Blueprint('auth', __name__)
 
@@ -33,7 +34,13 @@ def register():
         db.session.add(user)
         db.session.commit()
         
-        # Automatically log in the user upon registration
+        # Save immediate persistent snapshot
+        try:
+            save_db_backup(db, User, Expense, Budget, Subscription)
+        except Exception as e:
+            print(f"Error syncing backup on register: {e}")
+
+        # Automatically log in the user upon registration with 30-day cookie
         login_user(user, remember=True)
         flash(f'Account created successfully! Welcome, {user.username} 🎉', 'success')
         return redirect(url_for('main.dashboard'))
@@ -48,7 +55,7 @@ def login():
     if request.method == 'POST':
         login_input = request.form.get('username', '').strip()
         password = request.form.get('password', '')
-        remember = True if request.form.get('remember') else False
+        remember = True  # Always remember user session
 
         if not login_input or not password:
             flash('Please enter both username/email and password.', 'error')
@@ -66,7 +73,7 @@ def login():
             next_page = request.args.get('next')
             return redirect(next_page or url_for('main.dashboard'))
         else:
-            flash('Invalid username/email or password! If you recently redeployed, please click "Create an account" to register.', 'error')
+            flash('Invalid username/email or password. Please verify your credentials and try again.', 'error')
     
     return render_template('login.html')
 

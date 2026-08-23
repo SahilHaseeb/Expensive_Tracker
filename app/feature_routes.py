@@ -4,6 +4,7 @@ from app import db
 from app.models import Expense, Budget, Subscription, User
 from app.receipt_scanner import scan_receipt_image
 from app.analytics import calculate_financial_health_score
+from app.db_sync import save_db_backup
 from datetime import datetime, date, timedelta
 import re
 import pandas as pd
@@ -103,6 +104,10 @@ def budgets_page():
                 except ValueError:
                     pass
         db.session.commit()
+        try:
+            save_db_backup(db, User, Expense, Budget, Subscription)
+        except Exception as e:
+            print(f"Backup sync error: {e}")
         flash('Category budgets updated successfully! 🎯', 'success')
         return redirect(url_for('features.budgets_page'))
 
@@ -170,6 +175,10 @@ def subscriptions_page():
             )
             db.session.add(sub)
             db.session.commit()
+            try:
+                save_db_backup(db, User, Expense, Budget, Subscription)
+            except Exception as e:
+                print(f"Backup sync error: {e}")
             flash(f'Subscription "{name}" added successfully! 🔄', 'success')
             return redirect(url_for('features.subscriptions_page'))
 
@@ -180,14 +189,15 @@ def subscriptions_page():
     
     formatted_subs = []
     for s in subs:
-        days_left = (s.next_due_date - today).days
+        due_date = datetime.strptime(str(s.next_due_date), '%Y-%m-%d').date() if isinstance(s.next_due_date, str) else s.next_due_date
+        days_left = (due_date - today).days
         formatted_subs.append({
             "id": s.id,
             "name": s.name,
             "amount": s.amount,
             "category": s.category,
             "billing_cycle": s.billing_cycle,
-            "next_due_date": s.next_due_date,
+            "next_due_date": due_date,
             "days_left": days_left,
             "is_urgent": 0 <= days_left <= 3
         })
@@ -205,6 +215,10 @@ def delete_subscription(id):
     if sub.user_id == current_user.id:
         db.session.delete(sub)
         db.session.commit()
+        try:
+            save_db_backup(db, User, Expense, Budget, Subscription)
+        except Exception as e:
+            print(f"Backup sync error: {e}")
         flash('Subscription deleted! 🗑️', 'info')
     return redirect(url_for('features.subscriptions_page'))
 
@@ -222,6 +236,10 @@ def set_currency():
         user = User.query.get(current_user.id)
         user.currency = currency
         db.session.commit()
+        try:
+            save_db_backup(db, User, Expense, Budget, Subscription)
+        except Exception as e:
+            print(f"Backup sync error: {e}")
         return jsonify({"status": "success", "currency": currency})
     return jsonify({"status": "error", "message": "Invalid currency symbol"}), 400
 
