@@ -38,53 +38,100 @@ def dashboard():
     df = pd.DataFrame([(e.amount, e.category, e.date) for e in expenses], 
                       columns=['amount', 'category', 'date'])
     
-    # Pie chart
+    # Category Colors Map for Rich Visuals
+    CATEGORY_COLORS = {
+        'Food': '#10B981',           # Emerald Green
+        'Shopping': '#EC4899',       # Vibrant Pink
+        'Rent': '#6366F1',           # Electric Indigo
+        'Transport': '#F59E0B',      # Golden Amber
+        'Entertainment': '#8B5CF6',  # Violet Purple
+        'Healthcare': '#06B6D4',     # Bright Cyan
+        'Utilities': '#3B82F6',      # Sky Blue
+        'Education': '#14B8A6',      # Teal
+        'Groceries': '#84CC16',      # Lime
+        'Personal Care': '#F43F5E',  # Rose
+        'Other': '#94A3B8'           # Slate Grey
+    }
+
+    # 1. Category Breakdown Donut Chart
     pie_chart_json = None
     if not df.empty:
         df['date'] = pd.to_datetime(df['date'])
         current_df = df[(df['date'].dt.month == this_month) & (df['date'].dt.year == this_year)]
         if not current_df.empty:
             cat_sum = current_df.groupby('category')['amount'].sum().reset_index()
-            fig_pie = px.pie(cat_sum, values='amount', names='category', 
-                            title='Category Distribution',
-                            color_discrete_sequence=px.colors.sequential.RdBu,
-                            hole=0.4)
+            colors = [CATEGORY_COLORS.get(cat, '#6366F1') for cat in cat_sum['category']]
+            
+            fig_pie = go.Figure(data=[go.Pie(
+                labels=cat_sum['category'],
+                values=cat_sum['amount'],
+                hole=0.52,
+                marker=dict(colors=colors, line=dict(color='#0F172A', width=2)),
+                textposition='inside',
+                textinfo='percent+label',
+                textfont=dict(family='Plus Jakarta Sans, sans-serif', size=12, color='#FFFFFF'),
+                hovertemplate='<b>%{label}</b><br>💰 Spent: <b>' + user_currency + '%{value:,.2f}</b><br>📊 Share: <b>%{percent}</b><extra></extra>'
+            )])
+            
             fig_pie.update_layout(
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(0,0,0,0)',
-                font=dict(family='Plus Jakarta Sans, sans-serif', color='#64748b'),
-                margin=dict(t=30, b=0, l=0, r=0),
-                height=340
+                font=dict(family='Plus Jakarta Sans, sans-serif', color='#94A3B8'),
+                margin=dict(t=15, b=15, l=15, r=15),
+                height=320,
+                showlegend=True,
+                legend=dict(
+                    orientation='h',
+                    yanchor='bottom',
+                    y=-0.22,
+                    xanchor='center',
+                    x=0.5,
+                    font=dict(size=11, color='#94A3B8')
+                )
             )
             pie_chart_json = json.dumps(fig_pie, cls=plotly.utils.PlotlyJSONEncoder)
     
-    # Line chart (Monthly trend)
+    # 2. Spending Trend Smooth Spline Area Chart
     line_chart_json = None
     if not df.empty:
-        df['month_year'] = df['date'].dt.to_period('M')
-        monthly_total = df.groupby('month_year')['amount'].sum().reset_index()
-        monthly_total['month_year'] = monthly_total['month_year'].astype(str)
-        monthly_total = monthly_total.tail(6)
+        df['period'] = df['date'].dt.strftime('%b %Y')
+        df['sort_key'] = df['date'].dt.to_period('M')
+        
+        monthly_trend = df.groupby(['sort_key', 'period'])['amount'].sum().reset_index()
+        monthly_trend = monthly_trend.sort_values('sort_key').tail(6)
         
         fig_line = go.Figure()
         fig_line.add_trace(go.Scatter(
-            x=monthly_total['month_year'], 
-            y=monthly_total['amount'],
+            x=monthly_trend['period'], 
+            y=monthly_trend['amount'],
             mode='lines+markers',
-            line=dict(color='#6366F1', width=3),
-            marker=dict(size=9, color='#6366F1', line=dict(color='white', width=2)),
+            line=dict(color='#6366F1', width=3.5, shape='spline', smoothing=1.3),
+            marker=dict(size=10, color='#8B5CF6', line=dict(color='#FFFFFF', width=2)),
             fill='tozeroy',
-            fillcolor='rgba(99, 102, 241, 0.12)',
-            name='Monthly Spend'
+            fillcolor='rgba(99, 102, 241, 0.18)',
+            name='Monthly Total',
+            hovertemplate='<b>📅 Month: %{x}</b><br>💰 Total Spent: <b>' + user_currency + '%{y:,.2f}</b><extra></extra>'
         ))
+        
         fig_line.update_layout(
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(family='Plus Jakarta Sans, sans-serif', color='#64748b'),
-            margin=dict(t=30, b=0, l=0, r=0),
-            height=340,
-            xaxis=dict(showgrid=False),
-            yaxis=dict(showgrid=True, gridcolor='rgba(0,0,0,0.05)')
+            font=dict(family='Plus Jakarta Sans, sans-serif', color='#94A3B8'),
+            margin=dict(t=20, b=20, l=15, r=15),
+            height=320,
+            xaxis=dict(
+                showgrid=False,
+                color='#94A3B8',
+                tickfont=dict(size=12, family='Plus Jakarta Sans, sans-serif')
+            ),
+            yaxis=dict(
+                showgrid=True,
+                gridcolor='rgba(255, 255, 255, 0.08)',
+                color='#94A3B8',
+                tickprefix=user_currency,
+                tickformat=',.0f',
+                tickfont=dict(size=11, family='Plus Jakarta Sans, sans-serif')
+            )
         )
         line_chart_json = json.dumps(fig_line, cls=plotly.utils.PlotlyJSONEncoder)
     
