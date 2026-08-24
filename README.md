@@ -1,6 +1,6 @@
 # 💰 ExpenseAI — Smart AI & ML Personal Expense Tracker
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Render-success?style=for-the-badge&logo=render)](https://expensive-tracker-avfd.onrender.com)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Render-success?style=for-the-badge&logo=render)](https://expensive-tracker-sfev.onrender.com)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![Flask](https://img.shields.io/badge/Flask-3.0-black?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![Scikit-Learn](https://img.shields.io/badge/scikit--learn-ML-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
@@ -11,7 +11,7 @@
 ---
 
 ## 🌐 Live Web Application
-🔗 **[https://expensive-tracker-avfd.onrender.com](https://expensive-tracker-avfd.onrender.com)**
+🔗 **[https://expensive-tracker-sfev.onrender.com](https://expensive-tracker-sfev.onrender.com)**
 
 ---
 
