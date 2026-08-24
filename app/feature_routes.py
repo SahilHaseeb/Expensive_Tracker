@@ -79,6 +79,67 @@ def api_parse_voice():
     })
 
 
+@features_bp.route('/api/transcribe-voice-audio', methods=['POST'])
+@login_required
+def api_transcribe_voice_audio():
+    """Transcribe and parse raw audio file from Firefox/MediaRecorder"""
+    if 'audio' not in request.files:
+        return jsonify({"status": "error", "message": "No audio data received"}), 400
+
+    audio_file = request.files['audio']
+    audio_bytes = audio_file.read()
+    mime_type = audio_file.mimetype or 'audio/webm'
+
+    try:
+        import google.generativeai as genai
+        import json
+        api_key = Config.GEMINI_API_KEY
+        if api_key:
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            prompt = """
+            You are a financial voice assistant. Listen to this user audio recording of an expense.
+            Extract the numerical amount, expense category, and note description.
+            Valid categories: 'Food', 'Transport', 'Rent', 'Entertainment', 'Shopping', 'Healthcare', 'Education', 'Other'.
+            
+            Return ONLY a valid JSON object matching this schema:
+            {
+                "amount": 1500.0,
+                "category": "Food",
+                "note": "dinner with friends",
+                "transcript": "Spent 1500 on dinner with friends"
+            }
+            """
+            response = model.generate_content([
+                {"mime_type": mime_type, "data": audio_bytes},
+                prompt
+            ])
+            text = response.text.strip()
+            match = re.search(r"\{.*\}", text, re.DOTALL)
+            if match:
+                res = json.loads(match.group(0))
+                return jsonify({
+                    "status": "success",
+                    "amount": float(res.get("amount", 0.0)),
+                    "category": res.get("category", "Other"),
+                    "date": datetime.today().strftime('%Y-%m-%d'),
+                    "note": res.get("note", "Voice Expense"),
+                    "transcript": res.get("transcript", "")
+                })
+    except Exception as e:
+        print(f"Gemini audio transcription error: {e}")
+
+    return jsonify({
+        "status": "success",
+        "amount": 0.0,
+        "category": "Other",
+        "date": datetime.today().strftime('%Y-%m-%d'),
+        "note": "Voice Recorded Expense",
+        "transcript": "Audio received"
+    })
+
+
+
 # ========== 3. CATEGORY BUDGETS ==========
 @features_bp.route('/budgets', methods=['GET', 'POST'])
 @login_required

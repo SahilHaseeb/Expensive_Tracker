@@ -94,7 +94,7 @@
 <div class="voice-modal-overlay" id="voiceModal" style="display: none;">
     <div class="voice-modal-card glass animate-scale-in">
         <div class="voice-modal-header">
-            <h3><i class="fas fa-microphone text-primary"></i> Voice Expense Input</h3>
+            <h3><i class="fas fa-microphone text-primary"></i> Universal Voice & AI Expense Input</h3>
             <button class="close-modal-btn" onclick="closeVoiceModal()">&times;</button>
         </div>
         <div class="voice-modal-body">
@@ -104,11 +104,18 @@
             <p class="voice-status-text" id="voiceStatus">Click "Start Speaking" and speak your expense naturally...</p>
             <p class="voice-example-text">Example: <em>"Spent 1500 on dinner with friends"</em></p>
             <div class="voice-transcript-box" id="voiceTranscript"></div>
+
+            <div class="voice-fallback-input-row" style="margin-top: 14px; display: flex; gap: 8px;">
+                <input type="text" id="voiceNaturalInput" class="form-input" style="font-size: 13px;" placeholder="Or type naturally: e.g. Spent 1500 on dinner">
+                <button type="button" class="btn-primary" style="padding: 0 16px; font-size: 13px; white-space: nowrap;" onclick="parseTypedVoiceText()">
+                    <i class="fas fa-bolt"></i> Extract
+                </button>
+            </div>
         </div>
         <div class="voice-modal-actions">
             <button class="btn-secondary" onclick="closeVoiceModal()">Cancel</button>
             <button class="btn-primary" id="startVoiceBtn" onclick="toggleVoiceRecording()">
-                <i class="fas fa-play"></i> Start Speaking
+                <i class="fas fa-microphone"></i> Start Speaking
             </button>
         </div>
     </div>
