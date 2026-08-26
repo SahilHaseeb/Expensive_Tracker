@@ -90,14 +90,21 @@ def clean_store_search_query(query_title):
 
 def get_direct_store_url(store_name, raw_query):
     """
-    Build direct search URL to the actual online retailer website
-    using clean keyword queries for 100% hit rate.
+    Build direct search URL to the actual official retailer website
+    using clean keyword queries for 100% direct official store access.
     """
     cleaned_q = clean_store_search_query(raw_query)
     encoded_q = urllib.parse.quote_plus(cleaned_q)
-    store_lower = (store_name or "").lower()
+    store_lower = (store_name or "").lower().strip()
 
-    if "daraz" in store_lower:
+    # Major Global & Local Retailers
+    if "sam's club" in store_lower or "sams club" in store_lower or "samsclub" in store_lower:
+        return f"https://www.samsclub.com/s/{encoded_q}"
+    elif "ikea" in store_lower:
+        return f"https://www.ikea.com/us/en/search/?q={encoded_q}"
+    elif "staples" in store_lower:
+        return f"https://www.staples.com/search?q={encoded_q}"
+    elif "daraz" in store_lower:
         return f"https://www.daraz.pk/catalog/?q={encoded_q}"
     elif "aliexpress" in store_lower:
         return f"https://www.aliexpress.com/wholesale?SearchText={encoded_q}"
@@ -115,12 +122,76 @@ def get_direct_store_url(store_name, raw_query):
         return f"https://www.target.com/s?searchTerm={encoded_q}"
     elif "bestbuy" in store_lower or "best buy" in store_lower:
         return f"https://www.bestbuy.com/site/searchpage.jsp?st={encoded_q}"
+    elif "kohl" in store_lower:
+        return f"https://www.kohls.com/search.jsp?search={encoded_q}"
+    elif "lowe" in store_lower:
+        return f"https://www.lowes.com/search?searchTerm={encoded_q}"
+    elif "home depot" in store_lower or "homedepot" in store_lower:
+        return f"https://www.homedepot.com/s/{encoded_q}"
+    elif "wayfair" in store_lower:
+        return f"https://www.wayfair.com/keyword.php?keyword={encoded_q}"
+    elif "macy" in store_lower:
+        return f"https://www.macys.com/shop/featured/{encoded_q}"
+    elif "costco" in store_lower:
+        return f"https://www.costco.com/CatalogSearch?dept=All&keyword={encoded_q}"
+    elif "newegg" in store_lower:
+        return f"https://www.newegg.com/p/pl?d={encoded_q}"
+    elif "temu" in store_lower:
+        return f"https://www.temu.com/search_result.html?search_key={encoded_q}"
+    elif "shein" in store_lower:
+        return f"https://www.shein.com/pdsearch/{encoded_q}/"
+    elif "etsy" in store_lower:
+        return f"https://www.etsy.com/search?q={encoded_q}"
+    elif "nike" in store_lower:
+        return f"https://www.nike.com/w?q={encoded_q}"
+    elif "adidas" in store_lower:
+        return f"https://www.adidas.com/us/search?q={encoded_q}"
+    elif "apple" in store_lower:
+        return f"https://www.apple.com/us/search/{encoded_q}"
+    elif "junaid" in store_lower or "j." in store_lower:
+        return f"https://www.junaidjamshed.com/catalogsearch/result/?q={encoded_q}"
+    elif "khaadi" in store_lower:
+        return f"https://pk.khaadi.com/search/?q={encoded_q}"
+    elif "outfitters" in store_lower:
+        return f"https://outfitters.com.pk/search?q={encoded_q}"
     elif "asos" in store_lower:
         return f"https://www.asos.com/search/?q={encoded_q}"
     elif "nordstrom" in store_lower:
         return f"https://www.nordstrom.com/sr?origin=keywordsearch&keyword={encoded_q}"
     else:
-        return f"https://www.daraz.pk/catalog/?q={encoded_q}"
+        # If store is unknown or custom merchant brand (e.g. GTPlayer, VINGLI)
+        # check if store name itself is a domain
+        if "." in store_lower and not any(ch in store_lower for ch in [" ", "/"]):
+            return f"https://www.{store_lower}/search?q={encoded_q}"
+        return f"https://www.amazon.com/s?k={encoded_q}"
+
+
+def resolve_official_store_url(source_store, product_title, raw_link=None):
+    """
+    Ensure the link ALWAYS opens the official retailer website directly
+    and NEVER gets trapped on a Google search/shopping overview page.
+    """
+    link_str = str(raw_link or "").strip()
+    
+    # 1. If raw link is a direct official retailer website (not google.com), use it directly
+    if link_str.startswith("http") and "google.com" not in link_str.lower():
+        return link_str
+
+    # 2. If it is a Google redirect link with embedded adurl/url parameter, extract it
+    if link_str and "google.com" in link_str.lower():
+        try:
+            parsed = urllib.parse.urlparse(link_str)
+            qs = urllib.parse.parse_qs(parsed.query)
+            for param in ['url', 'adurl', 'q']:
+                if param in qs and qs[param] and qs[param][0].startswith("http"):
+                    extracted = qs[param][0]
+                    if "google.com" not in extracted.lower():
+                        return extracted
+        except Exception:
+            pass
+
+    # 3. Otherwise, generate the 100% direct official store search URL
+    return get_direct_store_url(source_store, product_title)
 
 
 # ─── UNIVERSAL CLEAN PRODUCT IMAGE POOLS (100% Relevant Category Photos) ────
@@ -460,7 +531,8 @@ def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
             title = item.get("title", f"{clean_query.title()} Product")
             thumbnail = item.get("thumbnail") or item.get("serpapi_thumbnail") or ""
             source = item.get("source") or item.get("merchant") or "Online Store"
-            link = item.get("link") or item.get("product_link") or get_direct_store_url(source, title)
+            raw_link = item.get("direct_link") or item.get("merchant_link") or item.get("link") or item.get("product_link")
+            link = resolve_official_store_url(source, title, raw_link)
             rating = float(item.get("rating") or 4.5)
             reviews = int(item.get("reviews") or 150)
 

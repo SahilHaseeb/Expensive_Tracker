@@ -100,10 +100,12 @@
                 {% endif %}
             </div>
 
-            <!-- Thumbnail with Fallback Safety -->
-            <div class="deal-image-wrapper">
-                <img src="{{ item.thumbnail }}" alt="{{ item.title }}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=500&auto=format&fit=crop&q=80'">
-            </div>
+            <!-- Thumbnail with Direct Store Link -->
+            <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer" class="deal-image-link" style="display: block; text-decoration: none;" title="Open on {{ item.source }}">
+                <div class="deal-image-wrapper">
+                    <img src="{{ item.thumbnail }}" alt="{{ item.title }}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=500&auto=format&fit=crop&q=80'">
+                </div>
+            </a>
 
             <!-- Content -->
             <div class="deal-details">
