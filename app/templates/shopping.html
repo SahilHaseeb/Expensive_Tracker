@@ -161,31 +161,93 @@
 </div>
 
 <style>
-.store-filter-btn {
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--text-muted);
-    border: 1px solid var(--border-color);
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 500;
+/* High-Contrast Dark Mode Styling for Dropdowns & Selects */
+#allStoresSelect, .sort-select {
+    color-scheme: dark !important;
+    background-color: #1e1e2f !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    border-radius: 10px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    outline: none;
     cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
     transition: all 0.2s ease;
 }
-.store-filter-btn:hover {
-    background: rgba(99, 102, 241, 0.15);
-    color: var(--text-primary);
-    border-color: var(--primary);
+
+#allStoresSelect:hover, #allStoresSelect:focus, .sort-select:hover, .sort-select:focus {
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3) !important;
 }
+
+#allStoresSelect option, .sort-select option {
+    background-color: #151522 !important;
+    color: #ffffff !important;
+    font-size: 13.5px;
+    font-weight: 500;
+    padding: 10px 14px !important;
+}
+
+#allStoresSelect option:checked, .sort-select option:checked {
+    background-color: #6366f1 !important;
+    color: #ffffff !important;
+    font-weight: 700;
+}
+
+/* Store Filter Pills */
+.store-filter-btn {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #e2e8f0 !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    padding: 7px 16px;
+    border-radius: 20px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.store-filter-btn:hover {
+    background: rgba(99, 102, 241, 0.25) !important;
+    color: #ffffff !important;
+    border-color: #6366f1 !important;
+    transform: translateY(-1px);
+}
+
 .active-store-filter {
-    background: linear-gradient(135deg, var(--primary), var(--secondary)) !important;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
     color: #ffffff !important;
     border-color: transparent !important;
-    font-weight: 600 !important;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    font-weight: 700 !important;
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.45) !important;
 }
+
 .hidden-deal-card {
     display: none !important;
+}
+
+/* Category Quick Filter Pills */
+.category-pill {
+    background: rgba(255, 255, 255, 0.06);
+    color: #cbd5e1;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    font-weight: 500;
+}
+.category-pill:hover {
+    background: rgba(99, 102, 241, 0.2);
+    color: #ffffff;
+    border-color: #6366f1;
+}
+.category-pill.active {
+    background: linear-gradient(135deg, #6366f1, #3b82f6);
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
 }
 </style>
 
