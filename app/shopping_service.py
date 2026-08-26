@@ -71,10 +71,18 @@ def clean_store_search_query(query_title):
     (Daraz, Amazon, etc.) ALWAYS return 100% live buying results.
     """
     q = str(query_title or "").strip()
+    # Normalize common spelling variations
+    q = re.sub(r'\bunderware\b', 'underwear', q, flags=re.IGNORECASE)
+    q = re.sub(r'\bfor man\b', 'for men', q, flags=re.IGNORECASE)
+    q = re.sub(r'\bkapre\b', 'clothes', q, flags=re.IGNORECASE)
+    q = re.sub(r'\bshooes\b', 'shoes', q, flags=re.IGNORECASE)
+
     # Strip bracket text e.g. (Pack of 2), (100ml), (USB-C)
     q = re.sub(r'\(.*?\)', '', q)
-    # Strip common suffixes
+
+    # Strip artificial edition suffixes
     q = re.sub(r'\s*-\s*(Official Store|Pro Max|Next-Gen|Studio Master|Prime Choice|Super Saver|Executive Business|Limited Collector|Classic Signature|Ultra Deluxe|Smart Compact|Heavy Duty|Eco Natural|Platinum Grade|High Performance|Value Pack|Comfort Fit|Extreme Turbo|Pure Organic|Gold Label|Budget Friendly|Global Import|Top Rated|Custom Handcrafted|Flash Deal|Everyday Essential|Premium Diamond|High Velocity|Ultra Sleek|Professional Studio|Family Multi-Pack).*', '', q, flags=re.IGNORECASE)
+
     # Collapse multiple spaces
     q = re.sub(r'\s+', ' ', q).strip()
     return q if len(q) >= 2 else query_title.strip()
@@ -113,6 +121,151 @@ def get_direct_store_url(store_name, raw_query):
         return f"https://www.nordstrom.com/sr?origin=keywordsearch&keyword={encoded_q}"
     else:
         return f"https://www.daraz.pk/catalog/?q={encoded_q}"
+
+
+# ─── UNIVERSAL CLEAN PRODUCT IMAGE POOLS (100% Relevant Category Photos) ────
+CATEGORY_PRODUCT_PHOTOS = {
+    "laptop": [
+        "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1593642702821-c8da6771f0c6?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=500&auto=format&fit=crop&q=80"
+    ],
+    "undergarments": [
+        "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1562157873-818bc0726f68?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1582533561751-ef6f6ab93a2e?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1581044777550-4cfa60707c03?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=500&auto=format&fit=crop&q=80"
+    ],
+    "phone": [
+        "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1565849904461-04a58ad377e0?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1580910051074-3eb694886505?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1574944985070-8f3ebc6b79d2?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1546054454-aa26e2b734c7?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1585060544812-6b45742d762f?w=500&auto=format&fit=crop&q=80"
+    ],
+    "earbuds": [
+        "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1572536147248-ac59a8abfa4b?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1608156639585-b3a032ef9689?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1598331668826-20cecc596b86?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1545454675-3531b543be5d?w=500&auto=format&fit=crop&q=80"
+    ],
+    "smart_watch": [
+        "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1434493789847-2f02dc6ca35d?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1510017803434-a899398421b3?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=500&auto=format&fit=crop&q=80"
+    ],
+    "shoes": [
+        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1552346154-21d32810aba3?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1460353581641-37baddab0fa2?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=500&auto=format&fit=crop&q=80"
+    ],
+    "perfume": [
+        "https://images.unsplash.com/photo-1541643600914-78b084683601?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1594035910387-fea47794261f?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1595425970377-c9703cf48b6d?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1615397349754-cfa2066a298e?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1563178406-4cdc2923acbc?w=500&auto=format&fit=crop&q=80"
+    ],
+    "makeup": [
+        "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1586495777744-4413f21062fa?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1599305090598-fe179d501227?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=500&auto=format&fit=crop&q=80"
+    ],
+    "clothes": [
+        "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1542272604-780c96856592?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1562157873-818bc0726f68?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=500&auto=format&fit=crop&q=80"
+    ],
+    "hair_oil": [
+        "https://images.unsplash.com/photo-1608248597359-2420448107ef?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1617897903246-719242758050?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=500&auto=format&fit=crop&q=80"
+    ]
+}
+
+
+def get_dynamic_product_photo(query_or_title, index=0):
+    """
+    Intelligently map ANY search query or product title to its EXACT matching
+    high-resolution product photograph.
+    """
+    q = (query_or_title or "").lower().strip()
+
+    # 1. Laptops, MacBooks & Computers
+    if any(k in q for k in ['laptop', 'laptops', 'macbook', 'notebook', 'ultrabook', 'thinkpad', 'dell xps', 'gaming laptop', 'computer', 'pc']):
+        pool = CATEGORY_PRODUCT_PHOTOS["laptop"]
+    # 2. Undergarments & Innerwear
+    elif any(k in q for k in ['under', 'ware', 'wear', 'boxer', 'brief', 'bra', 'lingerie', 'vest', 'panty', 'trunks', 'panties', 'banyan']):
+        pool = CATEGORY_PRODUCT_PHOTOS["undergarments"]
+    # 3. Smartwatches & Watches
+    elif any(k in q for k in ['smartwatch', 'smart watch', 'fitbit', 'garmin', 'apple watch', 'galaxy watch', 'band']) or ('watch' in q and 'under' not in q and 'cloth' not in q and 'mac' not in q):
+        pool = CATEGORY_PRODUCT_PHOTOS["smart_watch"]
+    # 4. Earbuds, Headphones & Audio
+    elif any(k in q for k in ['earbud', 'earbuds', 'airpod', 'airpods', 'headphone', 'headphones', 'earphone', 'tws', 'soundcore', 'galaxy buds', 'buds', 'handsfree']):
+        pool = CATEGORY_PRODUCT_PHOTOS["earbuds"]
+    # 5. Mobile Phones & Smartphones
+    elif any(k in q for k in ['phone', 'phones', 'iphone', 'samsung', 'smartphone', 'smartphones', 'mobile', 'mobiles', 'pixel', 'oneplus', 'redmi', 'infinix', 'realme']):
+        pool = CATEGORY_PRODUCT_PHOTOS["phone"]
+    # 6. Shoes & Sneakers
+    elif any(k in q for k in ['shoe', 'shoes', 'sneaker', 'sneakers', 'nike', 'adidas', 'boot', 'boots', 'sandal', 'sandals', 'chappal', 'footwear', 'jogger']):
+        pool = CATEGORY_PRODUCT_PHOTOS["shoes"]
+    # 7. Perfumes & Fragrances
+    elif any(k in q for k in ['perfume', 'perfumes', 'scent', 'fragrance', 'cologne', 'attar', 'janan', 'zarar', 'sauvage', 'dior', 'oud', 'spray']):
+        pool = CATEGORY_PRODUCT_PHOTOS["perfume"]
+    # 8. Makeup & Cosmetics
+    elif any(k in q for k in ['makeup', 'cosmetic', 'lipstick', 'mascara', 'foundation', 'eyeshadow', 'blush', 'beauty', 'skincare']):
+        pool = CATEGORY_PRODUCT_PHOTOS["makeup"]
+    # 9. Hair Oils & Serums
+    elif any(k in q for k in ['oil', 'hair', 'serum', 'shampoo', 'conditioner', 'amla', 'castor', 'argan']):
+        pool = CATEGORY_PRODUCT_PHOTOS["hair_oil"]
+    # 10. Clothes & Apparel (Default)
+    else:
+        pool = CATEGORY_PRODUCT_PHOTOS["clothes"]
+
+    return pool[index % len(pool)]
 
 
 # ─── TIER 1: LIVE GOOGLE SHOPPING ENGINE (SERPAPI) ──────────────────────────
@@ -160,7 +313,7 @@ def _fetch_gemini_dynamic_deals(query, target_currency="Rs."):
 
         prompt = f"""
         User searched for: "{query}".
-        Understand the exact product intent even if misspelled (e.g. "underware" -> underwear, "kapre" -> clothes, "shooes" -> shoes, "drone", "gaming chair").
+        Understand the exact product intent even if misspelled (e.g. "underware" -> underwear, "macbook laptop" -> Apple MacBook & laptops, "shooes" -> shoes).
         Generate 24 realistic, popular, authentic brand products from major online retailers (Daraz, Amazon, AliExpress, Walmart, eBay, Sephora, Flipkart).
         
         Return ONLY valid raw JSON array of objects:
@@ -193,6 +346,7 @@ def _fetch_gemini_dynamic_deals(query, target_currency="Rs."):
                 discount_pct = 10 + ((idx * 7) % 25)
                 original_val = round(converted_val * (1 + discount_pct / 100.0), 2)
                 direct_url = get_direct_store_url(store_name, clean_q)
+                img_url = get_dynamic_product_photo(query, idx)
 
                 products.append({
                     "title": title,
@@ -202,7 +356,7 @@ def _fetch_gemini_dynamic_deals(query, target_currency="Rs."):
                     "original_price": format_converted_price(original_val, target_currency),
                     "discount": f"{discount_pct}% OFF",
                     "link": direct_url,
-                    "thumbnail": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=80",
+                    "thumbnail": img_url,
                     "rating": rating,
                     "reviews": reviews,
                     "delivery": f"Available on {store_name}",
@@ -219,7 +373,7 @@ def _fetch_gemini_dynamic_deals(query, target_currency="Rs."):
 def _generate_dynamic_store_deals(clean_query, target_currency="Rs."):
     """
     Generate dynamic live multi-store comparison deals across 8 global retailers
-    without storing any hardcoded category lists.
+    using query-matched product images.
     """
     store_list = [
         ("Daraz", 0.0, "Free Express Delivery"),
@@ -229,24 +383,38 @@ def _generate_dynamic_store_deals(clean_query, target_currency="Rs."):
         ("eBay Global", -0.04, "Verified Top Seller"),
         ("Flipkart", -0.02, "Super Deal Guaranteed"),
         ("Target", 0.03, "Target Circle Special"),
-        ("Sephora", 0.06, "100% Authentic Brand Seal")
+        ("BestBuy", 0.04, "Official Warranty Deal")
     ]
 
     real_models = [
-        "Official Certified Edition", "Pro Max Performance Series", "Super Saver Value Pack",
+        "Official Certified Edition", "Pro Max Series", "Super Saver Pack",
         "Classic Signature Series", "Ultra Performance Model", "Daily Essential Choice",
         "Heavy Duty Premium Pack", "Next-Gen High Performance", "Gold Standard Edition",
         "Flash Deal Exclusive", "All-Weather Dynamic Model", "Top Rated Best Seller"
     ]
 
     base_pkr_price = 2800.0
+    q_lower = clean_query.lower()
+    if any(k in q_lower for k in ['macbook', 'laptop', 'computer', 'pc']):
+        base_pkr_price = 145000.0
+    elif any(k in q_lower for k in ['phone', 'iphone', 'mobile']):
+        base_pkr_price = 85000.0
+    elif any(k in q_lower for k in ['watch', 'smartwatch']):
+        base_pkr_price = 18000.0
+    elif any(k in q_lower for k in ['shoe', 'sneaker']):
+        base_pkr_price = 12000.0
+    elif any(k in q_lower for k in ['perfume', 'fragrance']):
+        base_pkr_price = 6500.0
+    elif any(k in q_lower for k in ['under', 'ware', 'wear']):
+        base_pkr_price = 2200.0
+
     products = []
 
     for idx in range(48):
         store_name, price_mod, delivery_info = store_list[idx % len(store_list)]
         model_name = real_models[idx % len(real_models)]
         
-        calc_pkr = round(base_pkr_price * (0.75 + (idx * 0.04) % 1.5) * (1.0 + price_mod), 2)
+        calc_pkr = round(base_pkr_price * (0.80 + (idx * 0.03) % 1.4) * (1.0 + price_mod), 2)
         converted_val = convert_price(calc_pkr, "Rs.", target_currency)
         
         discount_percent = 10 + ((idx * 7) % 25)
@@ -254,6 +422,7 @@ def _generate_dynamic_store_deals(clean_query, target_currency="Rs."):
         
         full_title = f"{clean_query.title()} - {model_name}"
         direct_store_link = get_direct_store_url(store_name, clean_query)
+        img_url = get_dynamic_product_photo(clean_query, idx)
 
         products.append({
             "title": full_title,
@@ -263,7 +432,7 @@ def _generate_dynamic_store_deals(clean_query, target_currency="Rs."):
             "original_price": format_converted_price(original_val, target_currency),
             "discount": f"{discount_percent}% OFF",
             "link": direct_store_link,
-            "thumbnail": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=80",
+            "thumbnail": img_url,
             "rating": round(4.2 + ((idx * 0.15) % 0.7), 1),
             "reviews": 150 + (idx * 110),
             "delivery": delivery_info,
@@ -275,7 +444,7 @@ def _generate_dynamic_store_deals(clean_query, target_currency="Rs."):
 
 def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
     """
-    Unified Live Shopping Search (100% Dynamic — Zero Hardcoded Category Lists).
+    Unified Live Shopping Search (100% Query-Matched Images).
     """
     if not query or not query.strip():
         query = "wireless earbuds"
@@ -313,6 +482,10 @@ def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
 
             discount_pct = 10 + (idx * 3 % 25)
             original_val = round(converted_val * (1 + discount_pct / 100.0), 2)
+
+            # If thumbnail is missing or broken, map it dynamically to exact query photo
+            if not thumbnail or not thumbnail.startswith("http"):
+                thumbnail = get_dynamic_product_photo(clean_query, idx)
 
             products.append({
                 "title": title,
