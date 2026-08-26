@@ -45,34 +45,28 @@
         </div>
     </div>
 
-    <!-- Dynamic Smart Store Filter Bar with Custom Dark Dropdown -->
-    <div class="store-filter-bar glass" style="margin: 16px 0; padding: 14px 20px; border-radius: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; position: relative; z-index: 9999;">
-        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;" id="quickStorePills">
-            <span style="font-size: 13px; font-weight: 600; color: #94a3b8;"><i class="fas fa-store text-primary"></i> Stores:</span>
-            <button class="store-filter-btn active-store-filter" id="allStoresBtn" onclick="filterByStore('ALL', this)">🌐 All Stores ({{ results.products|length }})</button>
-            <button class="store-filter-btn" onclick="filterByStore('Daraz', this)">📦 Daraz</button>
-            <button class="store-filter-btn" onclick="filterByStore('Amazon', this)">🛒 Amazon</button>
-            <button class="store-filter-btn" onclick="filterByStore('AliExpress', this)">✈️ AliExpress</button>
-            <button class="store-filter-btn" onclick="filterByStore('Walmart', this)">🏪 Walmart</button>
-            <button class="store-filter-btn" onclick="filterByStore('Target', this)">🎯 Target</button>
-            <button class="store-filter-btn" onclick="filterByStore('eBay', this)">🏷️ eBay</button>
+    <!-- Clean Inline Multi-Store Filter Bar (NO Obstructive Dropdowns Covering Cards) -->
+    <div class="store-filter-bar glass" style="margin: 16px 0; padding: 14px 20px; border-radius: 14px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 13px; font-weight: 700; color: #cbd5e1; display: flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-store text-primary"></i> Filter Retail Stores:
+                </span>
+            </div>
+
+            <!-- Quick Inline Store Search Filter Input -->
+            <div class="inline-store-search-box">
+                <i class="fas fa-magnifying-glass"></i>
+                <input type="text" id="storeQuickSearch" placeholder="Filter store by name..." onkeyup="filterStorePills(this.value)" autocomplete="off">
+            </div>
         </div>
 
-        <!-- Custom Glassmorphic Dark Store Dropdown (100% Guaranteed High Contrast) -->
-        <div class="custom-store-select-container" id="customStoreDropdown">
-            <button type="button" class="custom-select-trigger" id="customSelectTrigger" onclick="toggleStoreDropdown(event)">
-                <span id="selectedStoreLabel"><i class="fas fa-list-ul text-primary"></i> Filter All 40+ Stores</span>
-                <i class="fas fa-chevron-down dropdown-arrow" id="dropdownArrow"></i>
+        <!-- Dynamic Store Pills Container (All Stores with Real Deal Counts) -->
+        <div class="dynamic-store-pills-row" id="dynamicStorePillsContainer">
+            <button class="store-filter-btn active-store-filter" id="allStoresBtn" onclick="filterByStore('ALL', this)">
+                🌐 All Stores ({{ results.products|length }})
             </button>
-            <div class="custom-select-menu" id="customStoreMenu">
-                <div class="custom-select-search-box">
-                    <i class="fas fa-magnifying-glass" style="color: #818cf8; font-size: 12px;"></i>
-                    <input type="text" id="storeSearchInput" placeholder="Quick find store..." onkeyup="filterStoreList(this.value)" autocomplete="off">
-                </div>
-                <div class="custom-select-options-list" id="customStoreOptionsList">
-                    <!-- Populated dynamically via JS -->
-                </div>
-            </div>
+            <!-- Remaining stores populated dynamically on page load -->
         </div>
     </div>
 
@@ -171,152 +165,52 @@
 </div>
 
 <style>
-/* ─── CUSTOM GLASSMORPHIC DARK STORE DROPDOWN ───────────────────────────── */
-.custom-store-select-container {
-    position: relative;
-    user-select: none;
-    min-width: 250px;
-    z-index: 10000;
-}
-
-.custom-select-trigger {
-    background: #181829 !important;
-    color: #ffffff !important;
-    border: 1px solid rgba(255, 255, 255, 0.22) !important;
-    border-radius: 12px;
-    padding: 8px 16px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
+/* ─── INLINE STORE SEARCH BOX ───────────────────────────────────────────── */
+.inline-store-search-box {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    width: 100%;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 25px;
+    padding: 6px 14px;
     transition: all 0.2s ease;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
+    min-width: 220px;
 }
 
-.custom-select-trigger:hover {
-    border-color: #6366f1 !important;
-    background: #202038 !important;
+.inline-store-search-box:focus-within {
+    border-color: #6366f1;
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
 }
 
-.dropdown-arrow {
-    font-size: 11px;
-    color: #94a3b8;
-    transition: transform 0.25s ease;
-}
-
-.dropdown-arrow.rotated {
-    transform: rotate(180deg);
+.inline-store-search-box i {
     color: #818cf8;
+    font-size: 12px;
 }
 
-.custom-select-menu {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 0;
-    min-width: 280px;
-    max-height: 360px;
-    background: #121220 !important;
-    border: 1px solid rgba(99, 102, 241, 0.5) !important;
-    border-radius: 14px;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95), 0 0 25px rgba(99, 102, 241, 0.3) !important;
-    z-index: 999999 !important;
-    display: none;
-    flex-direction: column;
-    overflow: hidden;
-    backdrop-filter: blur(25px);
-}
-
-.deals-grid, .deal-card, .results-bar {
-    position: relative;
-    z-index: 1;
-}
-
-.custom-select-menu.open {
-    display: flex;
-    animation: dropdownPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes dropdownPop {
-    from { opacity: 0; transform: translateY(-8px) scale(0.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.custom-select-search-box {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    background: #0d0d18 !important;
-}
-
-.custom-select-search-box input {
-    background: transparent !important;
-    border: none !important;
-    outline: none !important;
-    color: #ffffff !important;
-    font-size: 13px !important;
+.inline-store-search-box input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #ffffff;
+    font-size: 12.5px;
     font-weight: 500;
     width: 100%;
 }
 
-.custom-select-search-box input::placeholder {
-    color: #64748b !important;
+.inline-store-search-box input::placeholder {
+    color: #94a3b8;
 }
 
-.custom-select-options-list {
-    overflow-y: auto;
-    max-height: 290px;
-    padding: 6px;
-    scrollbar-width: thin;
-    scrollbar-color: #6366f1 #121220;
-}
-
-.custom-option-item {
+/* ─── DYNAMIC STORE PILLS ROW ───────────────────────────────────────────── */
+.dynamic-store-pills-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 9px 14px;
-    border-radius: 9px;
-    color: #f8fafc !important;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    margin-bottom: 2px;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
-.custom-option-item:hover {
-    background: rgba(99, 102, 241, 0.3) !important;
-    color: #ffffff !important;
-    transform: translateX(3px);
-}
-
-.custom-option-item.selected {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
-    color: #ffffff !important;
-    font-weight: 700;
-}
-
-.custom-option-count {
-    background: rgba(255, 255, 255, 0.12);
-    color: #cbd5e1;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 600;
-}
-
-.custom-option-item:hover .custom-option-count {
-    background: rgba(255, 255, 255, 0.25);
-    color: #ffffff;
-}
-
-/* ─── STORE FILTER PILLS ─────────────────────────────────────────────────── */
 .store-filter-btn {
     background: rgba(255, 255, 255, 0.08) !important;
     color: #e2e8f0 !important;
@@ -347,6 +241,20 @@
     box-shadow: 0 4px 14px rgba(99, 102, 241, 0.45) !important;
 }
 
+.store-badge-count {
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    margin-left: 4px;
+}
+
+.active-store-filter .store-badge-count {
+    background: rgba(255, 255, 255, 0.3);
+}
+
 .hidden-deal-card {
     display: none !important;
 }
@@ -375,38 +283,26 @@
 let currentVisible = 24;
 const batchSize = 24;
 let activeStore = 'ALL';
-let storeListItems = [];
+let allStoreButtons = [];
 
-function toggleStoreDropdown(e) {
-    if (e) e.stopPropagation();
-    const menu = document.getElementById('customStoreMenu');
-    const arrow = document.getElementById('dropdownArrow');
-    const searchInput = document.getElementById('storeSearchInput');
-
-    if (menu.classList.contains('open')) {
-        menu.classList.remove('open');
-        arrow.classList.remove('rotated');
-    } else {
-        menu.classList.add('open');
-        arrow.classList.add('rotated');
-        if (searchInput) {
-            setTimeout(() => searchInput.focus(), 50);
-        }
-    }
+function getStoreEmoji(storeName) {
+    const s = storeName.toLowerCase();
+    if (s.includes('daraz')) return '📦';
+    if (s.includes('amazon')) return '🛒';
+    if (s.includes('aliexpress')) return '✈️';
+    if (s.includes('walmart')) return '🏪';
+    if (s.includes('target')) return '🎯';
+    if (s.includes('ebay')) return '🏷️';
+    if (s.includes('sephora')) return '💄';
+    if (s.includes('ikea')) return '🛋️';
+    if (s.includes('staples')) return '📎';
+    if (s.includes('bestbuy') || s.includes('best buy')) return '📺';
+    if (s.includes('spencer')) return '🏬';
+    if (s.includes('flipkart')) return '🛍️';
+    return '🏬';
 }
 
-// Close dropdown when clicking outside
-document.addEventListener('click', function(e) {
-    const dropdown = document.getElementById('customStoreDropdown');
-    const menu = document.getElementById('customStoreMenu');
-    const arrow = document.getElementById('dropdownArrow');
-    if (dropdown && !dropdown.contains(e.target) && menu) {
-        menu.classList.remove('open');
-        if (arrow) arrow.classList.remove('rotated');
-    }
-});
-
-function buildCustomStoreDropdown() {
+function buildDynamicStorePills() {
     const allCards = document.querySelectorAll('.deal-item-card');
     const storeCounts = {};
 
@@ -415,87 +311,57 @@ function buildCustomStoreDropdown() {
         storeCounts[s] = (storeCounts[s] || 0) + 1;
     });
 
-    const listEl = document.getElementById('customStoreOptionsList');
-    if (!listEl) return;
+    const container = document.getElementById('dynamicStorePillsContainer');
+    if (!container) return;
 
-    listEl.innerHTML = '';
-    storeListItems = [];
-
-    // 1. "All Stores" option
-    const allOpt = document.createElement('div');
-    allOpt.className = `custom-option-item ${activeStore === 'ALL' ? 'selected' : ''}`;
-    allOpt.setAttribute('data-store-name', 'ALL');
-    allOpt.onclick = function() { selectStoreFromCustomDropdown('ALL', `🌐 All ${allCards.length} Offers`); };
-    allOpt.innerHTML = `
-        <span><i class="fas fa-globe" style="margin-right: 8px; color: #818cf8;"></i> All Stores</span>
-        <span class="custom-option-count">${allCards.length}</span>
+    // Reset with "All Stores"
+    container.innerHTML = `
+        <button class="store-filter-btn ${activeStore === 'ALL' ? 'active-store-filter' : ''}" id="allStoresBtn" onclick="filterByStore('ALL', this)">
+            🌐 All Stores <span class="store-badge-count">${allCards.length}</span>
+        </button>
     `;
-    listEl.appendChild(allOpt);
-    storeListItems.push({ name: 'all stores', element: allOpt });
 
-    // 2. Individual Stores sorted alphabetically
-    const sortedStores = Object.keys(storeCounts).sort((a, b) => a.localeCompare(b));
+    allStoreButtons = [];
+    const allBtn = document.getElementById('allStoresBtn');
+    if (allBtn) allStoreButtons.push({ name: 'all stores', btn: allBtn });
+
+    // Sort stores by count (descending) so most popular stores appear first
+    const sortedStores = Object.keys(storeCounts).sort((a, b) => storeCounts[b] - storeCounts[a]);
+
     sortedStores.forEach(storeName => {
         const count = storeCounts[storeName];
-        const opt = document.createElement('div');
-        opt.className = `custom-option-item ${activeStore.toLowerCase() === storeName.toLowerCase() ? 'selected' : ''}`;
-        opt.setAttribute('data-store-name', storeName);
-        opt.onclick = function() { selectStoreFromCustomDropdown(storeName, `🏪 ${storeName}`); };
-        opt.innerHTML = `
-            <span><i class="fas fa-store" style="margin-right: 8px; color: #a5b4fc;"></i> ${storeName}</span>
-            <span class="custom-option-count">${count}</span>
-        `;
-        listEl.appendChild(opt);
-        storeListItems.push({ name: storeName.toLowerCase(), element: opt });
+        const emoji = getStoreEmoji(storeName);
+        const btn = document.createElement('button');
+        btn.className = `store-filter-btn ${activeStore.toLowerCase() === storeName.toLowerCase() ? 'active-store-filter' : ''}`;
+        btn.setAttribute('data-store-name', storeName);
+        btn.onclick = function() { filterByStore(storeName, this); };
+        btn.innerHTML = `${emoji} ${storeName} <span class="store-badge-count">${count}</span>`;
+        container.appendChild(btn);
+        allStoreButtons.push({ name: storeName.toLowerCase(), btn: btn });
     });
 }
 
-function filterStoreList(searchVal) {
-    const val = (searchVal || '').toLowerCase().trim();
-    storeListItems.forEach(item => {
-        if (!val || item.name.includes(val)) {
-            item.element.style.display = 'flex';
+function filterStorePills(keyword) {
+    const q = (keyword || '').toLowerCase().trim();
+    allStoreButtons.forEach(item => {
+        if (!q || item.name.includes(q)) {
+            item.btn.style.display = 'inline-flex';
         } else {
-            item.element.style.display = 'none';
+            item.btn.style.display = 'none';
         }
     });
 }
 
-function selectStoreFromCustomDropdown(storeName, labelText) {
+function filterByStore(storeName, btnElement) {
     activeStore = storeName;
     currentVisible = 24;
 
-    const labelEl = document.getElementById('selectedStoreLabel');
-    if (labelEl) {
-        labelEl.innerHTML = labelText;
-    }
-
-    // Update active highlight in menu
-    document.querySelectorAll('.custom-option-item').forEach(opt => {
-        if (opt.getAttribute('data-store-name').toLowerCase() === storeName.toLowerCase()) {
-            opt.classList.add('selected');
-        } else {
-            opt.classList.remove('selected');
-        }
-    });
-
-    // Update quick buttons row
     document.querySelectorAll('.store-filter-btn').forEach(btn => {
         btn.classList.remove('active-store-filter');
-        if (btn.innerText.toLowerCase().includes(storeName.toLowerCase())) {
-            btn.classList.add('active-store-filter');
-        }
     });
-    if (storeName === 'ALL') {
-        const allBtn = document.getElementById('allStoresBtn');
-        if (allBtn) allBtn.classList.add('active-store-filter');
+    if (btnElement) {
+        btnElement.classList.add('active-store-filter');
     }
-
-    // Close menu
-    const menu = document.getElementById('customStoreMenu');
-    const arrow = document.getElementById('dropdownArrow');
-    if (menu) menu.classList.remove('open');
-    if (arrow) arrow.classList.remove('rotated');
 
     updateDealsVisibility();
 }
@@ -545,36 +411,8 @@ function loadMoreDeals() {
     updateDealsVisibility();
 }
 
-function filterByStore(storeName, btnElement) {
-    activeStore = storeName;
-    currentVisible = 24;
-
-    document.querySelectorAll('.store-filter-btn').forEach(btn => {
-        btn.classList.remove('active-store-filter');
-    });
-    if (btnElement) {
-        btnElement.classList.add('active-store-filter');
-    }
-
-    const labelEl = document.getElementById('selectedStoreLabel');
-    if (labelEl) {
-        labelEl.innerHTML = storeName === 'ALL' ? '🌐 All Stores' : `🏪 ${storeName}`;
-    }
-
-    // Update active highlight in custom menu
-    document.querySelectorAll('.custom-option-item').forEach(opt => {
-        if (opt.getAttribute('data-store-name').toLowerCase() === storeName.toLowerCase()) {
-            opt.classList.add('selected');
-        } else {
-            opt.classList.remove('selected');
-        }
-    });
-
-    updateDealsVisibility();
-}
-
 document.addEventListener('DOMContentLoaded', function() {
-    buildCustomStoreDropdown();
+    buildDynamicStorePills();
     updateDealsVisibility();
 });
 </script>
