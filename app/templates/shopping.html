@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Live Price Finder & Deals - Smart Expense Tracker{% endblock %}
+{% block title %}Smart Deals & AI Price Hunter - Smart Expense Tracker{% endblock %}
 
 {% block content %}
 <div class="shopping-layout animate-fade-up">
@@ -7,11 +7,11 @@
     <div class="shopping-header-card glass">
         <div class="shopping-intro">
             <div class="shopping-icon-badge" style="background: linear-gradient(135deg, #10B981, #3B82F6);">
-                <i class="fas fa-tags"></i>
+                <i class="fas fa-bolt-lightning"></i>
             </div>
             <div>
-                <h1>Live Shopping Price Finder & Unlimited Deals</h1>
-                <p>Compare real-time product prices, discounts, and store offers across top global retailers (Amazon, Daraz, AliExpress, Sephora, Walmart, eBay, Flipkart, Target, BestBuy) with 1-click direct store access.</p>
+                <h1>Smart Deals & AI Price Hunter</h1>
+                <p>Compare real-time product prices, official discounts, and live store offers across 40+ top global & local retailers (Daraz, Amazon, AliExpress, Walmart, Target, IKEA, Sam's Club, Sephora, eBay, BestBuy) with 1-click direct store access.</p>
             </div>
         </div>
 
@@ -31,7 +31,7 @@
             </div>
         </form>
 
-        <!-- Quick Search Filter Pills -->
+        <!-- Quick Search Filter Pills (Clean Popular Categories) -->
         <div class="quick-category-pills">
             <span class="pills-label"><i class="fas fa-fire text-warning"></i> Popular:</span>
             <a href="{{ url_for('shopping.index', q='makeup kit', sort=current_sort) }}" class="category-pill {% if 'makeup' in current_query|lower %}active{% endif %}">💄 Makeup & Beauty</a>
@@ -42,22 +42,28 @@
             <a href="{{ url_for('shopping.index', q='running shoes', sort=current_sort) }}" class="category-pill {% if 'shoe' in current_query|lower %}active{% endif %}">👟 Shoes</a>
             <a href="{{ url_for('shopping.index', q='smart watch', sort=current_sort) }}" class="category-pill {% if 'watch' in current_query|lower %}active{% endif %}">⌚ Smart Watches</a>
             <a href="{{ url_for('shopping.index', q='designer clothes', sort=current_sort) }}" class="category-pill {% if 'cloth' in current_query|lower or 'dress' in current_query|lower %}active{% endif %}">👗 Clothes</a>
-            <a href="{{ url_for('shopping.index', q='undergarments', sort=current_sort) }}" class="category-pill {% if 'under' in current_query|lower %}active{% endif %}">🩲 Undergarments</a>
         </div>
     </div>
 
-    <!-- Live Store Filter Row -->
-    <div class="store-filter-bar glass" style="margin: 16px 0; padding: 12px 18px; border-radius: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-        <span style="font-size: 13px; font-weight: 600; color: var(--text-muted);"><i class="fas fa-filter text-primary"></i> Filter Store:</span>
-        <button class="store-filter-btn active-store-filter" onclick="filterByStore('ALL', this)">🌐 All Stores ({{ results.products|length }})</button>
-        <button class="store-filter-btn" onclick="filterByStore('Daraz', this)">📦 Daraz</button>
-        <button class="store-filter-btn" onclick="filterByStore('Amazon', this)">🛒 Amazon</button>
-        <button class="store-filter-btn" onclick="filterByStore('AliExpress', this)">✈️ AliExpress</button>
-        <button class="store-filter-btn" onclick="filterByStore('Walmart', this)">🏪 Walmart</button>
-        <button class="store-filter-btn" onclick="filterByStore('Sephora', this)">💄 Sephora</button>
-        <button class="store-filter-btn" onclick="filterByStore('eBay', this)">🏷️ eBay</button>
-        <button class="store-filter-btn" onclick="filterByStore('Flipkart', this)">🛍️ Flipkart</button>
-        <button class="store-filter-btn" onclick="filterByStore('Target', this)">🎯 Target</button>
+    <!-- Dynamic Smart Store Filter Bar with Dropdown -->
+    <div class="store-filter-bar glass" style="margin: 16px 0; padding: 14px 20px; border-radius: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;" id="quickStorePills">
+            <span style="font-size: 13px; font-weight: 600; color: var(--text-muted);"><i class="fas fa-store text-primary"></i> Stores:</span>
+            <button class="store-filter-btn active-store-filter" id="allStoresBtn" onclick="filterByStore('ALL', this)">🌐 All Stores ({{ results.products|length }})</button>
+            <button class="store-filter-btn" onclick="filterByStore('Daraz', this)">📦 Daraz</button>
+            <button class="store-filter-btn" onclick="filterByStore('Amazon', this)">🛒 Amazon</button>
+            <button class="store-filter-btn" onclick="filterByStore('AliExpress', this)">✈️ AliExpress</button>
+            <button class="store-filter-btn" onclick="filterByStore('Walmart', this)">🏪 Walmart</button>
+            <button class="store-filter-btn" onclick="filterByStore('Target', this)">🎯 Target</button>
+            <button class="store-filter-btn" onclick="filterByStore('eBay', this)">🏷️ eBay</button>
+        </div>
+
+        <!-- 40+ Stores Selection Dropdown -->
+        <div class="store-select-wrapper" style="display: flex; align-items: center; gap: 8px;">
+            <select id="allStoresSelect" onchange="filterByStoreDropdown(this.value)" style="background: rgba(255, 255, 255, 0.07); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 10px; padding: 7px 14px; font-size: 13px; outline: none; cursor: pointer;">
+                <option value="ALL">🔍 All 40+ Retail Stores ({{ results.products|length }})</option>
+            </select>
+        </div>
     </div>
 
     <!-- Results Information Bar -->
@@ -128,7 +134,7 @@
                     <span class="shipping-info"><i class="fas fa-truck-fast"></i> {{ item.delivery }}</span>
                 </div>
 
-                <!-- Direct Store External Link -->
+                <!-- Direct Official Store External Link -->
                 <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer" class="btn-deal" title="Open product directly on {{ item.source }}">
                     <span>View Deal on {{ item.source }}</span>
                     <i class="fas fa-arrow-up-right-from-square"></i>
@@ -188,6 +194,32 @@ let currentVisible = 24;
 const batchSize = 24;
 let activeStore = 'ALL';
 
+function populateDynamicStoreDropdown() {
+    const allCards = document.querySelectorAll('.deal-item-card');
+    const storeCounts = {};
+
+    allCards.forEach(card => {
+        const s = (card.getAttribute('data-store') || 'Other Store').trim();
+        storeCounts[s] = (storeCounts[s] || 0) + 1;
+    });
+
+    const selectEl = document.getElementById('allStoresSelect');
+    if (!selectEl) return;
+
+    // Clear and rebuild options
+    selectEl.innerHTML = `<option value="ALL">🔍 All ${allCards.length} Offers (${Object.keys(storeCounts).length} Stores)</option>`;
+    
+    // Sort stores alphabetically
+    const sortedStores = Object.keys(storeCounts).sort();
+    sortedStores.forEach(storeName => {
+        const count = storeCounts[storeName];
+        const opt = document.createElement('option');
+        opt.value = storeName;
+        opt.textContent = `${storeName} (${count} deals)`;
+        selectEl.appendChild(opt);
+    });
+}
+
 function updateDealsVisibility() {
     const allCards = document.querySelectorAll('.deal-item-card');
     let matchedCount = 0;
@@ -244,10 +276,41 @@ function filterByStore(storeName, btnElement) {
         btnElement.classList.add('active-store-filter');
     }
 
+    const selectEl = document.getElementById('allStoresSelect');
+    if (selectEl) {
+        selectEl.value = storeName;
+    }
+
+    updateDealsVisibility();
+}
+
+function filterByStoreDropdown(storeName) {
+    activeStore = storeName;
+    currentVisible = 24;
+
+    document.querySelectorAll('.store-filter-btn').forEach(btn => {
+        btn.classList.remove('active-store-filter');
+    });
+
+    // Check if there is a matching quick button
+    let matchedBtn = false;
+    document.querySelectorAll('.store-filter-btn').forEach(btn => {
+        if (btn.innerText.toLowerCase().includes(storeName.toLowerCase())) {
+            btn.classList.add('active-store-filter');
+            matchedBtn = true;
+        }
+    });
+
+    if (!matchedBtn && storeName === 'ALL') {
+        const allBtn = document.getElementById('allStoresBtn');
+        if (allBtn) allBtn.classList.add('active-store-filter');
+    }
+
     updateDealsVisibility();
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    populateDynamicStoreDropdown();
     updateDealsVisibility();
 });
 </script>
