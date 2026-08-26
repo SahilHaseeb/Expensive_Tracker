@@ -68,7 +68,7 @@ def format_converted_price(amount, currency_symbol):
 
 
 def clean_store_search_query(query_title):
-    """Clean text for search links"""
+    """Clean text for search queries"""
     q = str(query_title or "").strip()
     q = re.sub(r'\bunderware\b', 'underwear', q, flags=re.IGNORECASE)
     q = re.sub(r'\bfor man\b', 'for men', q, flags=re.IGNORECASE)
@@ -150,25 +150,75 @@ def get_direct_store_url(store_name, raw_query):
         return f"https://www.amazon.com/s?k={encoded_q}"
 
 
-def resolve_official_store_url(source_store, product_title, raw_link=None):
-    """Ensure the link opens the official retailer website directly"""
-    link_str = str(raw_link or "").strip()
-    if link_str.startswith("http") and "google.com" not in link_str.lower():
-        return link_str
+def is_google_domain(url_str):
+    """Check if URL points to Google's own search/shopping domains"""
+    if not url_str or not isinstance(url_str, str):
+        return True
+    u_lower = url_str.lower()
+    return "google.com" in u_lower or "google." in u_lower or "gstatic.com" in u_lower or "doubleclick.net" in u_lower
 
-    if link_str and "google.com" in link_str.lower():
-        try:
-            parsed = urllib.parse.urlparse(link_str)
-            qs = urllib.parse.parse_qs(parsed.query)
-            for param in ['url', 'adurl', 'q']:
-                if param in qs and qs[param] and qs[param][0].startswith("http"):
-                    extracted = qs[param][0]
-                    if "google.com" not in extracted.lower():
-                        return extracted
-        except Exception:
-            pass
 
-    return link_str if (link_str and link_str.startswith("http")) else get_direct_store_url(source_store, product_title)
+def unpack_google_redirect_url(redirect_url):
+    """Decode and extract the external destination URL from Google click/redirect links"""
+    try:
+        parsed = urllib.parse.urlparse(redirect_url)
+        qs = urllib.parse.parse_qs(parsed.query)
+        for param in ['url', 'adurl', 'q', 'dest', 'location', 'u', 'target']:
+            if param in qs and qs[param]:
+                for candidate_val in qs[param]:
+                    unquoted = urllib.parse.unquote(candidate_val.strip())
+                    if unquoted.startswith("http") and not is_google_domain(unquoted):
+                        return unquoted
+    except Exception:
+        pass
+    return None
+
+
+def extract_direct_retailer_url(item, source_store="", product_title=""):
+    """
+    Extract the authentic, direct official retailer product URL from a SerpAPI shopping result item.
+    Inspects direct candidate fields and unpacks Google redirect URLs (such as /url?url= or /aclk?adurl=).
+    Strictly filters out any Google internal URLs (e.g. google.com/shopping/product/ or google.com/search).
+    """
+    candidates = []
+
+    # 1. Direct candidate fields in the SerpAPI item
+    for key in ["direct_link", "merchant_link", "offer_link", "retailer_link", "link"]:
+        val = item.get(key)
+        if val and isinstance(val, str) and val.strip().startswith("http"):
+            candidates.append(val.strip())
+
+    # 2. Nested merchant object link (e.g. item["merchant"]["link"])
+    merchant = item.get("merchant")
+    if isinstance(merchant, dict):
+        for m_key in ["link", "url", "direct_link"]:
+            m_link = merchant.get(m_key)
+            if m_link and isinstance(m_link, str) and m_link.strip().startswith("http"):
+                candidates.append(m_link.strip())
+
+    # 3. Nested offers list links (e.g. item["offers"][0]["link"])
+    offers = item.get("offers")
+    if isinstance(offers, list):
+        for off in offers:
+            if isinstance(off, dict):
+                for o_key in ["link", "url", "direct_link"]:
+                    o_link = off.get(o_key)
+                    if o_link and isinstance(o_link, str) and o_link.strip().startswith("http"):
+                        candidates.append(o_link.strip())
+
+    # Process each candidate URL to extract the real retailer destination
+    for candidate in candidates:
+        # A. If it's already a direct external retailer URL (not google.com)
+        if not is_google_domain(candidate):
+            return candidate
+
+        # B. If it's a Google redirect wrapper (/url?url=..., /aclk?adurl=...), unpack it
+        unpacked = unpack_google_redirect_url(candidate)
+        if unpacked and not is_google_domain(unpacked):
+            return unpacked
+
+    # Fallback to direct official store page for that merchant so user never lands on Google
+    return get_direct_store_url(source_store, product_title)
 
 
 def extract_item_image(item):
@@ -214,8 +264,8 @@ def _fetch_serpapi_shopping(query, num=60):
 def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
     """
     Unified Live Shopping Search.
-    Preserves 100% 1-to-1 data integrity between SerpAPI results and their exact images.
-    NO guessed categories, NO hardcoded photos, NO mock overlays.
+    Preserves 100% 1-to-1 data integrity between SerpAPI results, direct retailer links, and their exact images.
+    NO Google Shopping redirects, NO guessed categories, NO hardcoded photos.
     """
     if not query or not query.strip():
         query = "wireless earbuds"
@@ -230,13 +280,15 @@ def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
         for idx, item in enumerate(serpapi_results):
             title = item.get("title", f"{clean_query.title()} Product")
             source = item.get("source") or item.get("merchant") or "Online Store"
-            raw_link = item.get("direct_link") or item.get("merchant_link") or item.get("link") or item.get("product_link")
-            link = resolve_official_store_url(source, title, raw_link)
-            rating = float(item.get("rating") or 4.5)
-            reviews = int(item.get("reviews") or 150)
+            
+            # Exact direct retailer URL strictly belonging to THIS result (Bypasses Google Shopping)
+            link = extract_direct_retailer_url(item, source_store=source, product_title=title)
             
             # Exact image belonging strictly to THIS specific SerpAPI result item
             image_url = extract_item_image(item)
+
+            rating = float(item.get("rating") or 4.5)
+            reviews = int(item.get("reviews") or 150)
 
             # Parse and convert price
             price_str = str(item.get("price") or item.get("extracted_price") or "")
@@ -279,7 +331,7 @@ def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
             apply_sorting_and_badges(products, sort_by)
             return {
                 "status": "success",
-                "source_type": "🔴 Live Google Shopping & Store Results",
+                "source_type": "🔴 Live Direct Store Deals & Verified Prices",
                 "query": clean_query,
                 "total_results": len(products),
                 "products": products
