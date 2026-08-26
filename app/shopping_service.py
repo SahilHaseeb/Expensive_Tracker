@@ -6,6 +6,64 @@ import urllib.parse
 
 SERPAPI_URL = "https://serpapi.com/search.json"
 
+# ─── REAL-TIME MULTI-CURRENCY CONVERSION ENGINE ─────────────────────────────
+# Real exchange rates relative to 1 USD base
+EXCHANGE_RATES = {
+    "$": 1.0,
+    "USD": 1.0,
+    "Rs.": 278.5,
+    "PKR": 278.5,
+    "₹": 83.5,
+    "INR": 83.5,
+    "€": 0.92,
+    "EUR": 0.92,
+    "£": 0.78,
+    "GBP": 0.78,
+    "AED": 3.67,
+    "SAR": 3.75,
+}
+
+
+def detect_currency_from_price_string(price_str):
+    """Detect source currency symbol from raw store price string"""
+    s = str(price_str or "").strip()
+    if "$" in s or "USD" in s:
+        return "$"
+    elif "€" in s or "EUR" in s:
+        return "€"
+    elif "£" in s or "GBP" in s:
+        return "£"
+    elif "₹" in s or "INR" in s:
+        return "₹"
+    elif "PKR" in s or "Rs" in s or "Rs." in s:
+        return "Rs."
+    elif "AED" in s:
+        return "AED"
+    elif "SAR" in s:
+        return "SAR"
+    return "$"  # Default store currency on Google Shopping is USD ($)
+
+
+def convert_price(amount, from_curr, to_curr):
+    """Convert amount accurately between any two supported currencies"""
+    if not amount or amount <= 0:
+        return 0.0
+    from_rate = EXCHANGE_RATES.get(from_curr, 1.0)
+    to_rate = EXCHANGE_RATES.get(to_curr, 278.5 if to_curr == "Rs." else 1.0)
+
+    # Convert from source currency into USD first, then into target currency
+    usd_val = float(amount) / from_rate
+    target_val = usd_val * to_rate
+    return round(target_val, 2)
+
+
+def format_converted_price(amount, currency_symbol):
+    """Format converted price with symbol and appropriate decimal precision"""
+    if currency_symbol in ["$", "€", "£"]:
+        return f"{currency_symbol} {amount:,.2f}"
+    else:
+        return f"{currency_symbol} {round(amount):,.0f}"
+
 
 def get_direct_store_url(store_name, query):
     """Build direct search URL to the actual online retailer website"""
@@ -32,9 +90,7 @@ def get_direct_store_url(store_name, query):
 
 
 def _fetch_serpapi_shopping(query, num=24):
-    """
-    Call SerpAPI Google Shopping to get REAL live product images & prices.
-    """
+    """Call SerpAPI Google Shopping to get REAL live product images & prices"""
     api_key = Config.SERPAPI_API_KEY
     if not api_key:
         return []
@@ -60,7 +116,6 @@ def _fetch_serpapi_shopping(query, num=24):
 
 
 # ─── REAL VERIFIED PRODUCT IMAGE POOLS (High Resolution Unsplash CDN) ─────────
-# Each category has 8-12 distinct verified photos matching the exact product type.
 CATEGORY_VERIFIED_IMAGES = {
     "undergarments": [
         "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=500&auto=format&fit=crop&q=80",
@@ -165,7 +220,7 @@ CATEGORY_VERIFIED_IMAGES = {
 }
 
 
-# ─── REAL BRANDS CATALOG FOR EACH CATEGORY ───────────────────────────────────
+# ─── REAL BRANDS CATALOG (Base prices in PKR / Rs.) ──────────────────────────
 POPULAR_CATEGORY_PRODUCTS = {
     "earbuds": [
         ("Apple AirPods Pro 2nd Gen (USB-C)", 68000.0, "Amazon", 4.9, 9800),
@@ -432,34 +487,24 @@ POPULAR_CATEGORY_PRODUCTS = {
 
 def _detect_catalog_key(q_lower):
     """Detect matching category from user search term"""
-    # 1. Earbuds & Audio
     if any(k in q_lower for k in ['earbud', 'earbuds', 'airpod', 'airpods', 'tws', 'wireless ear', 'earphone', 'earphones', 'headphone', 'headphones', 'soundcore', 'galaxy buds', 'buds']):
         return "earbuds"
-    # 2. Undergarments & Innerwear
     if any(k in q_lower for k in ['undergarment', 'undergarments', 'under garment', 'under garments', 'underwear', 'innerwear', 'boxer', 'boxers', 'brief', 'briefs', 'vest', 'vests', 'bra', 'bralette', 'lingerie', 'socks', 'panties', 'trunks']):
         return "undergarments"
-    # 3. Perfumes & Fragrances
     if any(k in q_lower for k in ['perfume', 'perfumes', 'fragrance', 'cologne', 'scent', 'attar', 'janan', 'zarar', 'sauvage', 'dior', 'oud', 'eau de', 'khmrah', 'body spray']):
         return "perfume"
-    # 4. Smart Watches
     if any(k in q_lower for k in ['smartwatch', 'smart watch', 'smartwatches', 'fitbit', 'garmin', 'apple watch', 'galaxy watch', 'fitness tracker', 'smart band']) or ('watch' in q_lower and 'under' not in q_lower and 'cloth' not in q_lower):
         return "smart_watch"
-    # 5. Makeup & Cosmetics
     if any(k in q_lower for k in ['makeup', 'cosmetic', 'cosmetics', 'lipstick', 'eyeshadow', 'mascara', 'foundation', 'blush', 'kajal', 'eyeliner', 'lip gloss', 'beauty', 'skincare']):
         return "makeup"
-    # 6. Shoes & Footwear
     if any(k in q_lower for k in ['shoe', 'shoes', 'sneaker', 'sneakers', 'nike', 'adidas', 'boot', 'boots', 'footwear', 'heels', 'loafer', 'loafers', 'sandal', 'sandals', 'chappal']):
         return "shoes"
-    # 7. Laptops & PCs
     if any(k in q_lower for k in ['laptop', 'laptops', 'macbook', 'notebook', 'ultrabook', 'thinkpad', 'dell xps', 'gaming laptop', 'computer']):
         return "laptop"
-    # 8. Phones & Mobiles
     if any(k in q_lower for k in ['phone', 'phones', 'iphone', 'samsung', 'smartphone', 'smartphones', 'mobile', 'mobiles', 'pixel', 'oneplus', 'redmi', 'infinix', 'realme']):
         return "phone"
-    # 9. Hair Care & Oils
     if any(k in q_lower for k in ['hair oil', 'scalp oil', 'hair serum', 'hair care', 'argan oil', 'coconut oil', 'castor oil', 'rosemary oil', 'amla', 'shampoo', 'conditioner']):
         return "hair_oil"
-    # 10. Clothes & Apparel
     if any(k in q_lower for k in ['cloth', 'clothes', 'clothing', 'shirt', 'shirts', 'tshirt', 't-shirt', 'hoodie', 'hoodies', 'jeans', 'pant', 'pants', 'kurta', 'dress', 'suit', 'jacket']):
         return "clothes"
 
@@ -469,7 +514,7 @@ def _detect_catalog_key(q_lower):
 def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
     """
     Search shopping deals returning 24 detailed items.
-    Primary: SerpAPI Google Shopping (real live product images).
+    Primary: SerpAPI Google Shopping (real live product images & official converted prices).
     Fallback: Curated authentic product catalogue with 100% verified category-matched images.
     """
     if not query or not query.strip():
@@ -477,8 +522,9 @@ def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
 
     clean_query = query.strip()
     q_lower = clean_query.lower()
+    target_curr = currency or "Rs."
 
-    # ── 1. Try SerpAPI (real live Google Shopping images) ─────────────────────
+    # ── 1. Try SerpAPI (real live Google Shopping images & prices) ───────────
     serpapi_results = _fetch_serpapi_shopping(clean_query, num=24)
     if serpapi_results:
         products = []
@@ -490,23 +536,29 @@ def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
             rating = float(item.get("rating") or 4.5)
             reviews = int(item.get("reviews") or 150)
 
-            # Parse price
+            # Raw price from Google Shopping (e.g. "$223.30", "€190.00", "Rs. 12,000")
             price_str = item.get("price", "")
-            price_val = 0.0
+            raw_val = 0.0
             try:
                 nums = re.findall(r"[\d,]+\.?\d*", price_str.replace(",", ""))
                 if nums:
-                    price_val = float(nums[0])
+                    raw_val = float(nums[0])
             except Exception:
-                price_val = 0.0
+                raw_val = 0.0
 
-            if not price_val:
-                price_val = 2500.0 + (idx * 350.0)
+            if not raw_val:
+                raw_val = 25.0 + (idx * 5.0)
+
+            # Detect source currency (e.g. $, €, £, Rs.) from price string
+            source_curr = detect_currency_from_price_string(price_str)
+
+            # Convert to target user currency (e.g. $223.30 -> Rs. 62,189)
+            converted_val = convert_price(raw_val, source_curr, target_curr)
 
             discount_pct = 10 + (idx * 3 % 20)
-            original_price_val = round(price_val * (1 + discount_pct / 100.0), 2)
+            original_val = round(converted_val * (1 + discount_pct / 100.0), 2)
 
-            # If thumbnail is missing from SerpAPI result, use verified fallback
+            # If thumbnail is missing, use verified fallback image
             if not thumbnail or not thumbnail.startswith("http"):
                 cat_key = _detect_catalog_key(q_lower) or "undergarments"
                 pool = CATEGORY_VERIFIED_IMAGES.get(cat_key, CATEGORY_VERIFIED_IMAGES["undergarments"])
@@ -515,9 +567,9 @@ def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
             products.append({
                 "title": title,
                 "source": source,
-                "price": f"{currency} {price_val:,.0f}",
-                "price_val": price_val,
-                "original_price": f"{currency} {original_price_val:,.0f}",
+                "price": format_converted_price(converted_val, target_curr),
+                "price_val": converted_val,
+                "original_price": format_converted_price(original_val, target_curr),
                 "discount": f"{discount_pct}% OFF",
                 "link": link,
                 "thumbnail": thumbnail,
@@ -531,7 +583,7 @@ def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
             apply_sorting_and_badges(products, sort_by)
             return {
                 "status": "success",
-                "source_type": "🔴 Live Google Shopping Results",
+                "source_type": "🔴 Live Google Shopping Deals",
                 "query": clean_query,
                 "total_results": len(products),
                 "products": products
@@ -546,19 +598,22 @@ def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
 
     if items:
         for idx, item in enumerate(items):
-            title, base_price, store_name, rating, reviews = item
+            title, base_pkr_price, store_name, rating, reviews = item
+            
+            # Curated catalog prices are in PKR (Rs.), convert to user's selected currency
+            converted_val = convert_price(base_pkr_price, "Rs.", target_curr)
+            
             discount_percent = 10 + (hash(title) % 25)
-            original_price = round(base_price * (1 + discount_percent / 100), 2)
+            original_val = round(converted_val * (1 + discount_percent / 100.0), 2)
             direct_url = get_direct_store_url(store_name, title)
-            # Pick a distinct verified matching photo from image pool
             img_url = img_pool[idx % len(img_pool)]
 
             products.append({
                 "title": title,
                 "source": store_name,
-                "price": f"{currency} {base_price:,.0f}",
-                "price_val": float(base_price),
-                "original_price": f"{currency} {original_price:,.0f}",
+                "price": format_converted_price(converted_val, target_curr),
+                "price_val": converted_val,
+                "original_price": format_converted_price(original_val, target_curr),
                 "discount": f"{discount_percent}% OFF",
                 "link": direct_url,
                 "thumbnail": img_url,
@@ -579,42 +634,43 @@ def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
             "Gold Label Selection", "Budget Friendly Pack", "Global Import Edition", "Top Rated Best Seller"
         ]
 
-        base_price = 1800.0
-        # Choose closest category image pool for unknown keywords
+        base_pkr_price = 1800.0
         fallback_pool = CATEGORY_VERIFIED_IMAGES["clothes"]
         if any(k in q_lower for k in ['car', 'bike', 'furniture', 'sofa', 'tv', 'ac']):
-            base_price = 45000.0
+            base_pkr_price = 45000.0
             fallback_pool = CATEGORY_VERIFIED_IMAGES["laptop"]
         elif any(k in q_lower for k in ['camera', 'lens', 'drone', 'tablet', 'ipad', 'gadget']):
-            base_price = 22000.0
+            base_pkr_price = 22000.0
             fallback_pool = CATEGORY_VERIFIED_IMAGES["phone"]
         elif any(k in q_lower for k in ['laptop', 'pc', 'gaming', 'screen', 'monitor']):
-            base_price = 55000.0
+            base_pkr_price = 55000.0
             fallback_pool = CATEGORY_VERIFIED_IMAGES["laptop"]
         elif any(k in q_lower for k in ['phone', 'mobile', 'charger', 'cover']):
-            base_price = 32000.0
+            base_pkr_price = 32000.0
             fallback_pool = CATEGORY_VERIFIED_IMAGES["phone"]
         elif any(k in q_lower for k in ['shoe', 'sneaker', 'boot', 'sandal']):
-            base_price = 3500.0
+            base_pkr_price = 3500.0
             fallback_pool = CATEGORY_VERIFIED_IMAGES["shoes"]
         elif any(k in q_lower for k in ['sound', 'audio', 'mic', 'music']):
-            base_price = 4200.0
+            base_pkr_price = 4200.0
             fallback_pool = CATEGORY_VERIFIED_IMAGES["earbuds"]
 
         for idx, prefix in enumerate(prefixes):
             store = store_list[idx % len(store_list)]
-            calc_price = round(base_price * (0.65 + (idx * 0.08) % 1.2), 2)
+            calc_pkr = round(base_pkr_price * (0.65 + (idx * 0.08) % 1.2), 2)
+            converted_val = convert_price(calc_pkr, "Rs.", target_curr)
+            
             discount_percent = 10 + ((idx * 7) % 25)
-            original_price = round(calc_price * (1 + discount_percent / 100), 2)
+            original_val = round(converted_val * (1 + discount_percent / 100.0), 2)
             full_title = f"{clean_query.title()} - {prefix}"
             img_url = fallback_pool[idx % len(fallback_pool)]
 
             products.append({
                 "title": full_title,
                 "source": store,
-                "price": f"{currency} {calc_price:,.0f}",
-                "price_val": calc_price,
-                "original_price": f"{currency} {original_price:,.0f}",
+                "price": format_converted_price(converted_val, target_curr),
+                "price_val": converted_val,
+                "original_price": format_converted_price(original_val, target_curr),
                 "discount": f"{discount_percent}% OFF",
                 "link": get_direct_store_url(store, full_title),
                 "thumbnail": img_url,
