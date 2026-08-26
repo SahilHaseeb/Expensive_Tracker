@@ -196,6 +196,40 @@ def resolve_official_store_url(source_store, product_title, raw_link=None):
 
 # ─── UNIVERSAL CLEAN PRODUCT IMAGE POOLS (Pure Isolated Studio Products — ZERO Human Faces) ────
 CATEGORY_PRODUCT_PHOTOS = {
+    "bottle": [
+        "https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1544816155-12df9643f363?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1523362628745-0c100150b504?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1589365278144-c9e705f843ba?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1536939459926-301728717817?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1570831739427-442b93108ea0?w=500&auto=format&fit=crop&q=80"
+    ],
+    "bag": [
+        "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1622560480605-d83c853bc5c3?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500&auto=format&fit=crop&q=80"
+    ],
+    "sunglasses": [
+        "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1508296695146-257a814070b4?w=500&auto=format&fit=crop&q=80"
+    ],
+    "kitchen": [
+        "https://images.unsplash.com/photo-1588854337236-6889d631faa8?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1585670149967-b4f4da88cc9f?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1544816155-12df9643f363?w=500&auto=format&fit=crop&q=80"
+    ],
+    "camera": [
+        "https://images.unsplash.com/photo-1512790182412-b19e6d62bc39?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1508614589041-895b88991e3e?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=500&auto=format&fit=crop&q=80"
+    ],
+    "gaming": [
+        "https://images.unsplash.com/photo-1600080972464-8e5f35f63d08?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&auto=format&fit=crop&q=80"
+    ],
     "anime_shirt": [
         "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=500&auto=format&fit=crop&q=80",
         "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=500&auto=format&fit=crop&q=80",
@@ -325,43 +359,61 @@ def get_dynamic_product_photo(query_or_title, index=0):
     """
     q = (query_or_title or "").lower().strip()
 
-    # 1. Anime & Graphic Print T-Shirts
-    if any(k in q for k in ['anime', 'manga', 'naruto', 'goku', 'graphic tee', 'printed shirt', 'anime shirt', 'otaku', 'graphic t-shirt']):
+    # 1. Water Bottles, Thermos, Shakers & Flasks
+    if any(k in q for k in ['bottle', 'bottles', 'flask', 'shaker', 'tumbler', 'sipper', 'thermos', 'mug', 'cup', 'water bottle']):
+        pool = CATEGORY_PRODUCT_PHOTOS["bottle"]
+    # 2. Bags, Backpacks & Wallets
+    elif any(k in q for k in ['bag', 'bags', 'backpack', 'handbag', 'wallet', 'purse', 'luggage', 'suitcase', 'pouch']):
+        pool = CATEGORY_PRODUCT_PHOTOS["bag"]
+    # 3. Sunglasses & Eyewear
+    elif any(k in q for k in ['glass', 'glasses', 'sunglass', 'sunglasses', 'eyewear', 'shades', 'spectacles']):
+        pool = CATEGORY_PRODUCT_PHOTOS["sunglasses"]
+    # 4. Kitchen & Home Appliances
+    elif any(k in q for k in ['kitchen', 'microwave', 'blender', 'fryer', 'cooker', 'oven', 'kettle', 'pot', 'pan']):
+        pool = CATEGORY_PRODUCT_PHOTOS["kitchen"]
+    # 5. Cameras & Drones
+    elif any(k in q for k in ['camera', 'drone', 'gopro', 'lens', 'tripod', 'dslr']):
+        pool = CATEGORY_PRODUCT_PHOTOS["camera"]
+    # 6. Gaming & Consoles
+    elif any(k in q for k in ['gaming', 'game', 'ps5', 'xbox', 'controller', 'console', 'nintendo', 'joystick']):
+        pool = CATEGORY_PRODUCT_PHOTOS["gaming"]
+    # 7. Anime & Graphic Print T-Shirts
+    elif any(k in q for k in ['anime', 'manga', 'naruto', 'goku', 'graphic tee', 'printed shirt', 'anime shirt', 'otaku', 'graphic t-shirt']):
         pool = CATEGORY_PRODUCT_PHOTOS["anime_shirt"]
-    # 2. T-Shirts & Shirts
+    # 8. T-Shirts & Shirts
     elif any(k in q for k in ['tshirt', 't-shirt', 'tee', 'tees', 't shirt', 'cotton shirt', 'polo']):
         pool = CATEGORY_PRODUCT_PHOTOS["tshirt"]
-    # 3. Chairs, Sofas & Desks
+    # 9. Chairs, Sofas & Desks
     elif any(k in q for k in ['chair', 'chairs', 'swivel', 'sofa', 'desk', 'table', 'furniture', 'stool', 'armchair', 'ergonomic']):
         pool = CATEGORY_PRODUCT_PHOTOS["chair"]
-    # 4. Laptops, MacBooks & Computers
+    # 10. Laptops, MacBooks & Computers
     elif any(k in q for k in ['laptop', 'laptops', 'macbook', 'notebook', 'ultrabook', 'thinkpad', 'dell xps', 'gaming laptop', 'computer', 'pc']):
         pool = CATEGORY_PRODUCT_PHOTOS["laptop"]
-    # 5. Undergarments & Innerwear
+    # 11. Undergarments & Innerwear
     elif any(k in q for k in ['under', 'ware', 'wear', 'boxer', 'brief', 'bra', 'lingerie', 'vest', 'panty', 'trunks', 'panties', 'banyan']):
         pool = CATEGORY_PRODUCT_PHOTOS["undergarments"]
-    # 6. Smartwatches & Watches
+    # 12. Smartwatches & Watches
     elif any(k in q for k in ['smartwatch', 'smart watch', 'fitbit', 'garmin', 'apple watch', 'galaxy watch', 'band']) or ('watch' in q and 'under' not in q and 'cloth' not in q and 'mac' not in q):
         pool = CATEGORY_PRODUCT_PHOTOS["smart_watch"]
-    # 7. Earbuds, Headphones & Audio
+    # 13. Earbuds, Headphones & Audio
     elif any(k in q for k in ['earbud', 'earbuds', 'airpod', 'airpods', 'headphone', 'headphones', 'earphone', 'tws', 'soundcore', 'galaxy buds', 'buds', 'handsfree']):
         pool = CATEGORY_PRODUCT_PHOTOS["earbuds"]
-    # 8. Mobile Phones & Smartphones
+    # 14. Mobile Phones & Smartphones
     elif any(k in q for k in ['phone', 'phones', 'iphone', 'samsung', 'smartphone', 'smartphones', 'mobile', 'mobiles', 'pixel', 'oneplus', 'redmi', 'infinix', 'realme']):
         pool = CATEGORY_PRODUCT_PHOTOS["phone"]
-    # 9. Shoes & Sneakers
+    # 15. Shoes & Sneakers
     elif any(k in q for k in ['shoe', 'shoes', 'sneaker', 'sneakers', 'nike', 'adidas', 'boot', 'boots', 'sandal', 'sandals', 'chappal', 'footwear', 'jogger']):
         pool = CATEGORY_PRODUCT_PHOTOS["shoes"]
-    # 10. Perfumes & Fragrances
+    # 16. Perfumes & Fragrances
     elif any(k in q for k in ['perfume', 'perfumes', 'scent', 'fragrance', 'cologne', 'attar', 'janan', 'zarar', 'sauvage', 'dior', 'oud', 'spray']):
         pool = CATEGORY_PRODUCT_PHOTOS["perfume"]
-    # 11. Makeup & Cosmetics
+    # 17. Makeup & Cosmetics
     elif any(k in q for k in ['makeup', 'cosmetic', 'lipstick', 'mascara', 'foundation', 'eyeshadow', 'blush', 'beauty', 'skincare']):
         pool = CATEGORY_PRODUCT_PHOTOS["makeup"]
-    # 12. Hair Oils & Serums
+    # 18. Hair Oils & Serums
     elif any(k in q for k in ['oil', 'hair', 'serum', 'shampoo', 'conditioner', 'amla', 'castor', 'argan']):
         pool = CATEGORY_PRODUCT_PHOTOS["hair_oil"]
-    # 13. Clothes & Apparel (Default)
+    # 19. Clothes & Apparel (Default)
     else:
         pool = CATEGORY_PRODUCT_PHOTOS["clothes"]
 
@@ -473,7 +525,7 @@ def _fetch_gemini_dynamic_deals(query, target_currency="Rs."):
 def _generate_dynamic_store_deals(clean_query, target_currency="Rs."):
     """
     Generate dynamic live multi-store comparison deals across 8 global retailers
-    using query-matched product images.
+    using query-matched product images and realistic titles.
     """
     store_list = [
         ("Daraz", 0.0, "Free Express Delivery"),
@@ -486,41 +538,124 @@ def _generate_dynamic_store_deals(clean_query, target_currency="Rs."):
         ("BestBuy", 0.04, "Official Warranty Deal")
     ]
 
-    real_models = [
+    q_lower = clean_query.lower()
+    base_pkr_price = 2800.0
+    product_names = []
+
+    # Category-tailored realistic names & pricing
+    if any(k in q_lower for k in ['bottle', 'bottles', 'flask', 'shaker', 'tumbler', 'sipper']):
+        base_pkr_price = 1850.0
+        product_names = [
+            "Stainless Steel Insulated Sports Water Bottle (750ml)",
+            "Gradient Motivational Time Marker Water Bottle (1000ml)",
+            "Double-Wall Vacuum Insulated Leakproof Thermal Flask (500ml)",
+            "Gym Protein Shaker Bottle with Wire Mixing Ball (600ml)",
+            "Aesthetic Borosilicate Glass Water Bottle with Protective Sleeve",
+            "Double Wall Thermal Travel Coffee Tumbler Mug (450ml)",
+            "Kids Cute Cartoon Spill-Proof Straw Water Bottle",
+            "Large Capacity Motivational Fitness Jug (2000ml)",
+            "BPA-Free Eco Reusable Hydration Water Bottle",
+            "Stainless Steel Cold & Hot Thermo Water Bottle (1L)"
+        ]
+    elif any(k in q_lower for k in ['anime', 'manga', 'naruto', 'goku', 'otaku', 'graphic tee']):
+        base_pkr_price = 2200.0
+        product_names = [
+            "Oversized Anime Graphic Printed 100% Cotton T-Shirt",
+            "Vintage Manga Graphic Streetwear Drop Shoulder Tee",
+            "Heavyweight Combed Cotton Anime Character Print Shirt",
+            "Japanese Aesthetic Anime Art Printed Summer Tee",
+            "Retro Graphic Anime Streetwear Casual T-Shirt",
+            "Cyberpunk Aesthetic Anime Print Crewneck Tee"
+        ]
+    elif any(k in q_lower for k in ['bag', 'backpack', 'wallet', 'purse', 'handbag']):
+        base_pkr_price = 4500.0
+        product_names = [
+            "Waterproof Laptop Travel Backpack with USB Charging Port",
+            "Genuine Leather Classic Slim Bi-fold Wallet",
+            "Multi-Pocket Casual Canvas Daypack Backpack",
+            "Anti-Theft Business Travel Ergonomic Backpack",
+            "Lightweight Gym Duffle Bag with Shoe Compartment"
+        ]
+    elif any(k in q_lower for k in ['chair', 'furniture', 'sofa', 'desk']):
+        base_pkr_price = 18500.0
+        product_names = [
+            "Ergonomic Mesh High-Back Swivel Office Task Chair",
+            "Reclining Gaming Chair with Footrest & Lumbar Support",
+            "Modern Scandinavian Solid Wood Accent Dining Chair",
+            "Breathable Executive Swivel Chair with Adjustable Armrests",
+            "Minimalist Padded Home Office Study Chair"
+        ]
+    elif any(k in q_lower for k in ['macbook', 'laptop', 'computer', 'pc']):
+        base_pkr_price = 145000.0
+        product_names = [
+            "Ultra-Thin 15.6-inch Core i7 16GB RAM 512GB SSD Laptop",
+            "High Performance Gaming Laptop RTX Graphics 144Hz Display",
+            "Slim Aluminum Body Professional Business Laptop",
+            "2-in-1 Convertible Touchscreen Laptop Core i5 8GB 256GB"
+        ]
+    elif any(k in q_lower for k in ['phone', 'iphone', 'mobile', 'smartphone']):
+        base_pkr_price = 85000.0
+        product_names = [
+            "5G Flagship Smartphone 256GB Storage 120Hz AMOLED",
+            "High Resolution Camera Smartphone 8GB RAM 128GB",
+            "Fast Charging Octa-Core Long Battery Life Smartphone"
+        ]
+    elif any(k in q_lower for k in ['watch', 'smartwatch']):
+        base_pkr_price = 18000.0
+        product_names = [
+            "AMOLED Display Bluetooth Calling Smartwatch with Heart Rate",
+            "Waterproof Sports Fitness Tracker Smartwatch GPS",
+            "Luxury Stainless Steel Bezel Smartwatch Long Battery"
+        ]
+    elif any(k in q_lower for k in ['shoe', 'sneaker', 'jogger']):
+        base_pkr_price = 12000.0
+        product_names = [
+            "Lightweight Breathable Air Cushion Running Shoes",
+            "Classic Low-Top Streetwear Lifestyle Casual Sneakers",
+            "Non-Slip Training Gym Athletic Jogging Shoes",
+            "Memory Foam Slip-On Comfortable Walking Shoes"
+        ]
+    elif any(k in q_lower for k in ['perfume', 'fragrance']):
+        base_pkr_price = 6500.0
+        product_names = [
+            "Luxury Long-Lasting Eau De Parfum Spray (100ml)",
+            "Fresh Aquatic Woody Concentrated Fragrance",
+            "Oud & Amber Royal Premium Unisex Perfume"
+        ]
+    elif any(k in q_lower for k in ['under', 'ware', 'wear', 'boxer']):
+        base_pkr_price = 2200.0
+        product_names = [
+            "100% Super Combed Cotton Classic Boxers (Pack of 3)",
+            "Moisture-Wicking Stretch Cotton Boxer Briefs",
+            "Seamless Breathable Soft Bamboo Innerwear Trunks"
+        ]
+
+    # Fallback generic model suffixes if specific list not matched
+    generic_models = [
         "Official Certified Edition", "Pro Max Series", "Super Saver Pack",
         "Classic Signature Series", "Ultra Performance Model", "Daily Essential Choice",
         "Heavy Duty Premium Pack", "Next-Gen High Performance", "Gold Standard Edition",
         "Flash Deal Exclusive", "All-Weather Dynamic Model", "Top Rated Best Seller"
     ]
 
-    base_pkr_price = 2800.0
-    q_lower = clean_query.lower()
-    if any(k in q_lower for k in ['macbook', 'laptop', 'computer', 'pc']):
-        base_pkr_price = 145000.0
-    elif any(k in q_lower for k in ['phone', 'iphone', 'mobile']):
-        base_pkr_price = 85000.0
-    elif any(k in q_lower for k in ['watch', 'smartwatch']):
-        base_pkr_price = 18000.0
-    elif any(k in q_lower for k in ['shoe', 'sneaker']):
-        base_pkr_price = 12000.0
-    elif any(k in q_lower for k in ['perfume', 'fragrance']):
-        base_pkr_price = 6500.0
-    elif any(k in q_lower for k in ['under', 'ware', 'wear']):
-        base_pkr_price = 2200.0
-
     products = []
 
     for idx in range(48):
         store_name, price_mod, delivery_info = store_list[idx % len(store_list)]
-        model_name = real_models[idx % len(real_models)]
         
+        if product_names:
+            base_title = product_names[idx % len(product_names)]
+            full_title = f"{base_title}" if idx < len(product_names) else f"{base_title} - {store_name} Deal"
+        else:
+            model_name = generic_models[idx % len(generic_models)]
+            full_title = f"{clean_query.title()} - {model_name}"
+
         calc_pkr = round(base_pkr_price * (0.80 + (idx * 0.03) % 1.4) * (1.0 + price_mod), 2)
         converted_val = convert_price(calc_pkr, "Rs.", target_currency)
         
         discount_percent = 10 + ((idx * 7) % 25)
         original_val = round(converted_val * (1 + discount_percent / 100.0), 2)
         
-        full_title = f"{clean_query.title()} - {model_name}"
         direct_store_link = get_direct_store_url(store_name, clean_query)
         img_url = get_dynamic_product_photo(clean_query, idx)
 
