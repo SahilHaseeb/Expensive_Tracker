@@ -31,7 +31,7 @@
             </div>
         </form>
 
-        <!-- Quick Search Filter Pills (Clean Popular Categories) -->
+        <!-- Quick Search Filter Pills -->
         <div class="quick-category-pills">
             <span class="pills-label"><i class="fas fa-fire text-warning"></i> Popular:</span>
             <a href="{{ url_for('shopping.index', q='makeup kit', sort=current_sort) }}" class="category-pill {% if 'makeup' in current_query|lower %}active{% endif %}">💄 Makeup & Beauty</a>
@@ -45,10 +45,10 @@
         </div>
     </div>
 
-    <!-- Dynamic Smart Store Filter Bar with Dropdown -->
+    <!-- Dynamic Smart Store Filter Bar with Custom Dark Dropdown -->
     <div class="store-filter-bar glass" style="margin: 16px 0; padding: 14px 20px; border-radius: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;" id="quickStorePills">
-            <span style="font-size: 13px; font-weight: 600; color: var(--text-muted);"><i class="fas fa-store text-primary"></i> Stores:</span>
+            <span style="font-size: 13px; font-weight: 600; color: #94a3b8;"><i class="fas fa-store text-primary"></i> Stores:</span>
             <button class="store-filter-btn active-store-filter" id="allStoresBtn" onclick="filterByStore('ALL', this)">🌐 All Stores ({{ results.products|length }})</button>
             <button class="store-filter-btn" onclick="filterByStore('Daraz', this)">📦 Daraz</button>
             <button class="store-filter-btn" onclick="filterByStore('Amazon', this)">🛒 Amazon</button>
@@ -58,11 +58,21 @@
             <button class="store-filter-btn" onclick="filterByStore('eBay', this)">🏷️ eBay</button>
         </div>
 
-        <!-- 40+ Stores Selection Dropdown -->
-        <div class="store-select-wrapper" style="display: flex; align-items: center; gap: 8px;">
-            <select id="allStoresSelect" onchange="filterByStoreDropdown(this.value)" style="background: rgba(255, 255, 255, 0.07); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 10px; padding: 7px 14px; font-size: 13px; outline: none; cursor: pointer;">
-                <option value="ALL">🔍 All 40+ Retail Stores ({{ results.products|length }})</option>
-            </select>
+        <!-- Custom Glassmorphic Dark Store Dropdown (100% Guaranteed High Contrast) -->
+        <div class="custom-store-select-container" id="customStoreDropdown">
+            <button type="button" class="custom-select-trigger" id="customSelectTrigger" onclick="toggleStoreDropdown(event)">
+                <span id="selectedStoreLabel"><i class="fas fa-list-ul text-primary"></i> Filter All 40+ Stores</span>
+                <i class="fas fa-chevron-down dropdown-arrow" id="dropdownArrow"></i>
+            </button>
+            <div class="custom-select-menu" id="customStoreMenu">
+                <div class="custom-select-search-box">
+                    <i class="fas fa-magnifying-glass" style="color: #818cf8; font-size: 12px;"></i>
+                    <input type="text" id="storeSearchInput" placeholder="Quick find store..." onkeyup="filterStoreList(this.value)" autocomplete="off">
+                </div>
+                <div class="custom-select-options-list" id="customStoreOptionsList">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
         </div>
     </div>
 
@@ -161,42 +171,146 @@
 </div>
 
 <style>
-/* High-Contrast Dark Mode Styling for Dropdowns & Selects */
-#allStoresSelect, .sort-select {
-    color-scheme: dark !important;
-    background-color: #1e1e2f !important;
+/* ─── CUSTOM GLASSMORPHIC DARK STORE DROPDOWN ───────────────────────────── */
+.custom-store-select-container {
+    position: relative;
+    user-select: none;
+    min-width: 250px;
+}
+
+.custom-select-trigger {
+    background: #181829 !important;
     color: #ffffff !important;
-    border: 1px solid rgba(255, 255, 255, 0.25) !important;
-    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    border-radius: 12px;
     padding: 8px 16px;
     font-size: 13px;
     font-weight: 600;
-    outline: none;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
     transition: all 0.2s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
 }
 
-#allStoresSelect:hover, #allStoresSelect:focus, .sort-select:hover, .sort-select:focus {
+.custom-select-trigger:hover {
     border-color: #6366f1 !important;
-    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3) !important;
+    background: #202038 !important;
 }
 
-#allStoresSelect option, .sort-select option {
-    background-color: #151522 !important;
+.dropdown-arrow {
+    font-size: 11px;
+    color: #94a3b8;
+    transition: transform 0.25s ease;
+}
+
+.dropdown-arrow.rotated {
+    transform: rotate(180deg);
+    color: #818cf8;
+}
+
+.custom-select-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 280px;
+    max-height: 360px;
+    background: #121220 !important;
+    border: 1px solid rgba(99, 102, 241, 0.4) !important;
+    border-radius: 14px;
+    box-shadow: 0 20px 45px -5px rgba(0, 0, 0, 0.85), 0 0 20px rgba(99, 102, 241, 0.25) !important;
+    z-index: 99999;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    backdrop-filter: blur(20px);
+}
+
+.custom-select-menu.open {
+    display: flex;
+    animation: dropdownPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dropdownPop {
+    from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.custom-select-search-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: #0d0d18 !important;
+}
+
+.custom-select-search-box input {
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
     color: #ffffff !important;
-    font-size: 13.5px;
+    font-size: 13px !important;
     font-weight: 500;
-    padding: 10px 14px !important;
+    width: 100%;
 }
 
-#allStoresSelect option:checked, .sort-select option:checked {
-    background-color: #6366f1 !important;
+.custom-select-search-box input::placeholder {
+    color: #64748b !important;
+}
+
+.custom-select-options-list {
+    overflow-y: auto;
+    max-height: 290px;
+    padding: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: #6366f1 #121220;
+}
+
+.custom-option-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 14px;
+    border-radius: 9px;
+    color: #f8fafc !important;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-bottom: 2px;
+}
+
+.custom-option-item:hover {
+    background: rgba(99, 102, 241, 0.3) !important;
+    color: #ffffff !important;
+    transform: translateX(3px);
+}
+
+.custom-option-item.selected {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
     color: #ffffff !important;
     font-weight: 700;
 }
 
-/* Store Filter Pills */
+.custom-option-count {
+    background: rgba(255, 255, 255, 0.12);
+    color: #cbd5e1;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.custom-option-item:hover .custom-option-count {
+    background: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
+
+/* ─── STORE FILTER PILLS ─────────────────────────────────────────────────── */
 .store-filter-btn {
     background: rgba(255, 255, 255, 0.08) !important;
     color: #e2e8f0 !important;
@@ -231,7 +345,7 @@
     display: none !important;
 }
 
-/* Category Quick Filter Pills */
+/* ─── CATEGORY QUICK PILLS ──────────────────────────────────────────────── */
 .category-pill {
     background: rgba(255, 255, 255, 0.06);
     color: #cbd5e1;
@@ -255,8 +369,38 @@
 let currentVisible = 24;
 const batchSize = 24;
 let activeStore = 'ALL';
+let storeListItems = [];
 
-function populateDynamicStoreDropdown() {
+function toggleStoreDropdown(e) {
+    if (e) e.stopPropagation();
+    const menu = document.getElementById('customStoreMenu');
+    const arrow = document.getElementById('dropdownArrow');
+    const searchInput = document.getElementById('storeSearchInput');
+
+    if (menu.classList.contains('open')) {
+        menu.classList.remove('open');
+        arrow.classList.remove('rotated');
+    } else {
+        menu.classList.add('open');
+        arrow.classList.add('rotated');
+        if (searchInput) {
+            setTimeout(() => searchInput.focus(), 50);
+        }
+    }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('customStoreDropdown');
+    const menu = document.getElementById('customStoreMenu');
+    const arrow = document.getElementById('dropdownArrow');
+    if (dropdown && !dropdown.contains(e.target) && menu) {
+        menu.classList.remove('open');
+        if (arrow) arrow.classList.remove('rotated');
+    }
+});
+
+function buildCustomStoreDropdown() {
     const allCards = document.querySelectorAll('.deal-item-card');
     const storeCounts = {};
 
@@ -265,21 +409,89 @@ function populateDynamicStoreDropdown() {
         storeCounts[s] = (storeCounts[s] || 0) + 1;
     });
 
-    const selectEl = document.getElementById('allStoresSelect');
-    if (!selectEl) return;
+    const listEl = document.getElementById('customStoreOptionsList');
+    if (!listEl) return;
 
-    // Clear and rebuild options
-    selectEl.innerHTML = `<option value="ALL">🔍 All ${allCards.length} Offers (${Object.keys(storeCounts).length} Stores)</option>`;
-    
-    // Sort stores alphabetically
-    const sortedStores = Object.keys(storeCounts).sort();
+    listEl.innerHTML = '';
+    storeListItems = [];
+
+    // 1. "All Stores" option
+    const allOpt = document.createElement('div');
+    allOpt.className = `custom-option-item ${activeStore === 'ALL' ? 'selected' : ''}`;
+    allOpt.setAttribute('data-store-name', 'ALL');
+    allOpt.onclick = function() { selectStoreFromCustomDropdown('ALL', `🌐 All ${allCards.length} Offers`); };
+    allOpt.innerHTML = `
+        <span><i class="fas fa-globe" style="margin-right: 8px; color: #818cf8;"></i> All Stores</span>
+        <span class="custom-option-count">${allCards.length}</span>
+    `;
+    listEl.appendChild(allOpt);
+    storeListItems.push({ name: 'all stores', element: allOpt });
+
+    // 2. Individual Stores sorted alphabetically
+    const sortedStores = Object.keys(storeCounts).sort((a, b) => a.localeCompare(b));
     sortedStores.forEach(storeName => {
         const count = storeCounts[storeName];
-        const opt = document.createElement('option');
-        opt.value = storeName;
-        opt.textContent = `${storeName} (${count} deals)`;
-        selectEl.appendChild(opt);
+        const opt = document.createElement('div');
+        opt.className = `custom-option-item ${activeStore.toLowerCase() === storeName.toLowerCase() ? 'selected' : ''}`;
+        opt.setAttribute('data-store-name', storeName);
+        opt.onclick = function() { selectStoreFromCustomDropdown(storeName, `🏪 ${storeName}`); };
+        opt.innerHTML = `
+            <span><i class="fas fa-store" style="margin-right: 8px; color: #a5b4fc;"></i> ${storeName}</span>
+            <span class="custom-option-count">${count}</span>
+        `;
+        listEl.appendChild(opt);
+        storeListItems.push({ name: storeName.toLowerCase(), element: opt });
     });
+}
+
+function filterStoreList(searchVal) {
+    const val = (searchVal || '').toLowerCase().trim();
+    storeListItems.forEach(item => {
+        if (!val || item.name.includes(val)) {
+            item.element.style.display = 'flex';
+        } else {
+            item.element.style.display = 'none';
+        }
+    });
+}
+
+function selectStoreFromCustomDropdown(storeName, labelText) {
+    activeStore = storeName;
+    currentVisible = 24;
+
+    const labelEl = document.getElementById('selectedStoreLabel');
+    if (labelEl) {
+        labelEl.innerHTML = labelText;
+    }
+
+    // Update active highlight in menu
+    document.querySelectorAll('.custom-option-item').forEach(opt => {
+        if (opt.getAttribute('data-store-name').toLowerCase() === storeName.toLowerCase()) {
+            opt.classList.add('selected');
+        } else {
+            opt.classList.remove('selected');
+        }
+    });
+
+    // Update quick buttons row
+    document.querySelectorAll('.store-filter-btn').forEach(btn => {
+        btn.classList.remove('active-store-filter');
+        if (btn.innerText.toLowerCase().includes(storeName.toLowerCase())) {
+            btn.classList.add('active-store-filter');
+        }
+    });
+    if (storeName === 'ALL') {
+        const allBtn = document.getElementById('allStoresBtn');
+        if (allBtn) allBtn.classList.add('active-store-filter');
+    }
+
+    // Close menu
+    const menu = document.getElementById('customStoreMenu');
+    const arrow = document.getElementById('dropdownArrow');
+    if (menu) menu.classList.remove('open');
+    if (arrow) arrow.classList.remove('rotated');
+
+    updateDealsVisibility();
 }
 
 function updateDealsVisibility() {
@@ -338,41 +550,25 @@ function filterByStore(storeName, btnElement) {
         btnElement.classList.add('active-store-filter');
     }
 
-    const selectEl = document.getElementById('allStoresSelect');
-    if (selectEl) {
-        selectEl.value = storeName;
+    const labelEl = document.getElementById('selectedStoreLabel');
+    if (labelEl) {
+        labelEl.innerHTML = storeName === 'ALL' ? '🌐 All Stores' : `🏪 ${storeName}`;
     }
 
-    updateDealsVisibility();
-}
-
-function filterByStoreDropdown(storeName) {
-    activeStore = storeName;
-    currentVisible = 24;
-
-    document.querySelectorAll('.store-filter-btn').forEach(btn => {
-        btn.classList.remove('active-store-filter');
-    });
-
-    // Check if there is a matching quick button
-    let matchedBtn = false;
-    document.querySelectorAll('.store-filter-btn').forEach(btn => {
-        if (btn.innerText.toLowerCase().includes(storeName.toLowerCase())) {
-            btn.classList.add('active-store-filter');
-            matchedBtn = true;
+    // Update active highlight in custom menu
+    document.querySelectorAll('.custom-option-item').forEach(opt => {
+        if (opt.getAttribute('data-store-name').toLowerCase() === storeName.toLowerCase()) {
+            opt.classList.add('selected');
+        } else {
+            opt.classList.remove('selected');
         }
     });
-
-    if (!matchedBtn && storeName === 'ALL') {
-        const allBtn = document.getElementById('allStoresBtn');
-        if (allBtn) allBtn.classList.add('active-store-filter');
-    }
 
     updateDealsVisibility();
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    populateDynamicStoreDropdown();
+    buildCustomStoreDropdown();
     updateDealsVisibility();
 });
 </script>
