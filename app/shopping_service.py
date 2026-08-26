@@ -4,6 +4,7 @@ from config import Config
 import re
 import json
 import urllib.parse
+import difflib
 
 SERPAPI_URL = "https://serpapi.com/search.json"
 
@@ -25,6 +26,155 @@ EXCHANGE_RATES = {
     "AED": 3.67,
     "SAR": 3.75,
 }
+
+# ─── COMPREHENSIVE SHOPPING & ENGLISH VOCABULARY (NEVER OVERWRITTEN) ────────
+STANDARD_VALID_WORDS = {
+    # Pronouns, prepositions, modifiers, attributes
+    "a", "an", "the", "for", "with", "and", "or", "to", "in", "on", "by", "of", "from",
+    "at", "is", "it", "all", "new", "pro", "max", "plus", "ultra", "mini", "lite", "se",
+    "red", "blue", "black", "white", "green", "yellow", "pink", "purple", "orange", "grey",
+    "gray", "silver", "gold", "dark", "light", "clear", "case", "cover", "pack", "set", "lot",
+    "phone", "phones", "cell", "mobile", "smart", "men", "man", "women", "woman", "kid", "kids",
+    "boy", "boys", "girl", "girls", "baby", "unisex", "adult", "size", "fit", "slim", "long",
+    "short", "top", "bottom", "hot", "best", "deal", "deals", "low", "high", "fast", "pure",
+    "real", "dry", "wet", "gel", "cream", "oil", "bar", "box", "bag", "cup", "mug", "car", "air",
+    "face", "body", "hair", "skin", "eye", "lip", "hand", "foot", "feet", "head", "ear",
+    
+    # Tech & Electronics
+    "iphone", "ipad", "macbook", "airpods", "apple", "samsung", "galaxy", "xiaomi", "redmi",
+    "huawei", "oneplus", "google", "pixel", "oppo", "vivo", "realme", "infinix", "tecno",
+    "laptop", "laptops", "notebook", "ultrabook", "computer", "desktop", "monitor", "keyboard",
+    "mouse", "headphones", "headphone", "earphones", "earphone", "earbuds", "earbud", "bluetooth",
+    "wireless", "speaker", "speakers", "soundbar", "smartwatch", "watch", "watches", "charger",
+    "cable", "adapter", "powerbank", "camera", "drone", "gopro", "microphone", "tablet", "console",
+    "playstation", "xbox", "nintendo", "switch", "router", "modem", "printer", "projector",
+    "processor", "graphics", "motherboard", "ssd", "ram", "storage", "usb", "type-c", "5g", "4g",
+    
+    # Fashion & Apparel
+    "shoes", "shoe", "sneakers", "sneaker", "boots", "boot", "sandals", "sandal", "heels", "slippers",
+    "clothes", "clothing", "dress", "dresses", "shirt", "shirts", "tshirt", "t-shirt", "polo",
+    "hoodie", "hoodies", "jacket", "jackets", "coat", "coats", "pants", "jeans", "trousers",
+    "shorts", "skirt", "sweater", "cardigan", "suit", "blazer", "underwear", "undergarments",
+    "boxers", "briefs", "bra", "lingerie", "socks", "scarf", "gloves", "belt", "hat", "cap",
+    "sunglasses", "glasses", "wallet", "bags", "backpack", "backpacks", "handbag", "purse",
+    "luggage", "suitcase", "jewelry", "necklace", "ring", "earrings", "bracelet", "kurta", "shalwar",
+    
+    # Beauty, Cosmetics & Skincare
+    "perfume", "perfumes", "fragrance", "fragrances", "cologne", "scent", "attar", "oud",
+    "makeup", "cosmetics", "lipstick", "mascara", "eyeliner", "foundation", "concealer", "blush",
+    "powder", "eyeshadow", "skincare", "lotion", "moisturizer", "serum", "cleanser", "facewash",
+    "wash", "sunscreen", "sunblock", "toner", "scrub", "mask", "shampoo", "conditioner",
+    "dryer", "straightener", "trimmer", "shaver", "razor", "soap", "deodorant", "beauty",
+    
+    # Major Retail Brands
+    "nike", "adidas", "puma", "reebok", "under", "armour", "zara", "gucci", "chanel", "dior",
+    "versace", "armani", "calvin", "klein", "tommy", "hilfiger", "levis", "h&m", "sephora",
+    "loreal", "maybelline", "olay", "nivea", "garnier", "dove", "cerave", "cetaphil", "ordinary",
+    "neutrogena", "rolex", "casio", "fossil", "titan", "citizen", "seiko", "tissot", "sony",
+    "bose", "jbl", "sennheiser", "beats", "anker", "logitech", "razer", "corsair", "dell",
+    "hp", "lenovo", "asus", "acer", "msi", "toshiba", "canon", "nikon", "panasonic", "lg",
+    
+    # Home, Sports & Lifestyle
+    "bottle", "bottles", "flask", "shaker", "tumbler", "chair", "chairs", "table", "desk",
+    "sofa", "bed", "furniture", "blender", "microwave", "oven", "airfryer", "fryer", "cooker",
+    "kettle", "toaster", "vacuum", "cleaner", "fan", "heater", "iron", "grinder", "mattress",
+    "pillow", "blanket", "curtain", "lamp", "light", "clock", "mirror", "carpet", "rug",
+    "towel", "fitness", "gym", "yoga", "mat", "dumbbell", "treadmill", "cycle", "bicycle",
+    "helmet", "tent"
+}
+
+# ─── COMMON SHOPPING GRAMMAR & PHRASE NORMALIZATIONS ───────────────────────
+PHRASE_NORMALIZATIONS = [
+    (r'\bfor woman\b', 'for women'),
+    (r'\bfor man\b', 'for men'),
+    (r'\bfor kid\b', 'for kids'),
+    (r'\bfor child\b', 'for children'),
+    (r'\bfor boy\b', 'for boys'),
+    (r'\bfor girl\b', 'for girls'),
+    (r'\bwoman clothing\b', 'women clothing'),
+    (r'\bman clothing\b', 'men clothing'),
+    (r'\bwoman shoe\b', 'women shoes'),
+    (r'\bman shoe\b', 'men shoes'),
+    (r'\bwoman shoes\b', 'women shoes'),
+    (r'\bman shoes\b', 'men shoes'),
+    (r'\bwoman dress\b', 'women dresses'),
+    (r'\bblu tooth\b', 'bluetooth'),
+    (r'\bblue tooth\b', 'bluetooth'),
+    (r'\bhead phone\b', 'headphones'),
+    (r'\bhead phones\b', 'headphones'),
+    (r'\bear phone\b', 'earphones'),
+    (r'\bear phones\b', 'earphones'),
+    (r'\bear bud\b', 'earbuds'),
+    (r'\bear buds\b', 'earbuds'),
+    (r'\bsmart watch\b', 'smartwatch'),
+    (r'\blap top\b', 'laptop'),
+    (r'\bt shirt\b', 't-shirt'),
+    (r'\btee shirt\b', 't-shirt'),
+    (r'\bface clenser\b', 'face cleanser'),
+]
+
+
+def correct_word(word):
+    """Correct misspelled word while strictly maintaining valid words & numbers"""
+    w = word.lower().strip()
+    if not w or len(w) <= 2 or w.isdigit() or not w.isalpha():
+        return word
+
+    # If already a valid known word, never alter it
+    if w in STANDARD_VALID_WORDS:
+        return word
+
+    # Find closest match with length tolerance and similarity >= 0.80
+    matches = difflib.get_close_matches(w, STANDARD_VALID_WORDS, n=3, cutoff=0.80)
+    if matches:
+        # Prioritize matches with similar length (abs difference <= 2)
+        filtered = [m for m in matches if abs(len(m) - len(w)) <= 2]
+        if filtered:
+            best = filtered[0]
+            # Match plural forms if original ended in 's' or 'se'
+            if (w.endswith('s') or w.endswith('se')) and not best.endswith('s'):
+                plural_candidates = [m for m in filtered if m.endswith('s')]
+                if plural_candidates:
+                    best = plural_candidates[0]
+
+            if word.istitle():
+                return best.title()
+            elif word.isupper():
+                return best.upper()
+            return best
+
+    return word
+
+
+def normalize_and_correct_query(query):
+    """
+    Intelligently normalize search query for minor spelling mistakes,
+    grammar variations, and singular/plural discrepancies without altering intent.
+    """
+    if not query or not str(query).strip():
+        return ""
+
+    q = str(query).strip()
+    # Normalize whitespace
+    q = re.sub(r'\s+', ' ', q)
+
+    # Apply phrase rules
+    for pattern, repl in PHRASE_NORMALIZATIONS:
+        q = re.sub(pattern, repl, q, flags=re.IGNORECASE)
+
+    # Token-level corrections
+    tokens = q.split(' ')
+    corrected_tokens = []
+    for token in tokens:
+        m = re.match(r'^([^\w]*)([\w\-\'\.]+)([^\w]*)$', token)
+        if m:
+            prefix, core, suffix = m.groups()
+            corr = correct_word(core)
+            corrected_tokens.append(f"{prefix}{corr}{suffix}")
+        else:
+            corrected_tokens.append(token)
+
+    return ' '.join(corrected_tokens)
 
 
 def detect_currency_from_price_string(price_str):
@@ -261,87 +411,127 @@ def _fetch_serpapi_shopping(query, num=60):
     return []
 
 
+def _process_serpapi_results(serpapi_results, query, target_curr="Rs."):
+    """Process raw SerpAPI results into structured products preserving 1-to-1 data integrity"""
+    products = []
+    for idx, item in enumerate(serpapi_results):
+        title = item.get("title", f"{query.title()} Product")
+        source = item.get("source") or item.get("merchant") or "Online Store"
+        
+        # Exact direct retailer URL strictly belonging to THIS result (Bypasses Google Shopping)
+        link = extract_direct_retailer_url(item, source_store=source, product_title=title)
+        
+        # Exact image belonging strictly to THIS specific SerpAPI result item
+        image_url = extract_item_image(item)
+
+        rating = float(item.get("rating") or 4.5)
+        reviews = int(item.get("reviews") or 150)
+
+        # Parse and convert price
+        price_str = str(item.get("price") or item.get("extracted_price") or "")
+        raw_val = 0.0
+        if item.get("extracted_price") and isinstance(item.get("extracted_price"), (int, float)):
+            raw_val = float(item.get("extracted_price"))
+        else:
+            try:
+                nums = re.findall(r"[\d,]+\.?\d*", price_str.replace(",", ""))
+                if nums:
+                    raw_val = float(nums[0])
+            except Exception:
+                raw_val = 0.0
+
+        if not raw_val:
+            raw_val = 25.0
+
+        source_curr = detect_currency_from_price_string(price_str)
+        converted_val = convert_price(raw_val, source_curr, target_curr)
+
+        discount_pct = 10 + (idx * 3 % 25)
+        original_val = round(converted_val * (1 + discount_pct / 100.0), 2)
+
+        products.append({
+            "title": title,
+            "source": source,
+            "price": format_converted_price(converted_val, target_curr),
+            "price_val": converted_val,
+            "original_price": format_converted_price(original_val, target_curr),
+            "discount": f"{discount_pct}% OFF",
+            "link": link,
+            "thumbnail": image_url,
+            "rating": rating,
+            "reviews": reviews,
+            "delivery": item.get("delivery") or f"Available on {source}",
+            "badge": None
+        })
+
+    return products
+
+
 def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
     """
-    Unified Live Shopping Search.
-    Preserves 100% 1-to-1 data integrity between SerpAPI results, direct retailer links, and their exact images.
-    NO Google Shopping redirects, NO guessed categories, NO hardcoded photos.
+    Unified Live Shopping Search with Intelligent Query Normalization & Multi-Attempt Fallback.
+    - Attempt 1: Search using the user's original query.
+    - Attempt 2: If 0 results, search using the intelligently corrected / normalized query.
+    - Attempt 3: If still 0 results and query is compound, search with simplified core keywords.
+    Max 3 controlled attempts total to prevent excessive API calls.
     """
-    if not query or not query.strip():
-        query = "wireless earbuds"
+    raw_query = (query or "").strip()
+    if not raw_query:
+        raw_query = "wireless earbuds"
 
-    clean_query = clean_store_search_query(query)
     target_curr = currency or "Rs."
+    
+    # Candidate search queries in priority order
+    attempts = []
+    
+    # 1. First attempt: Original user query
+    clean_original = clean_store_search_query(raw_query)
+    attempts.append(clean_original)
+    
+    # 2. Second attempt: Corrected / normalized query (if different)
+    corrected_q = normalize_and_correct_query(raw_query)
+    clean_corrected = clean_store_search_query(corrected_q)
+    if clean_corrected.lower() != clean_original.lower() and clean_corrected.lower() not in [a.lower() for a in attempts]:
+        attempts.append(clean_corrected)
+        
+    # 3. Third attempt: Simplified core product intent (e.g. if filler prepositions caused 0 results)
+    simplified_q = re.sub(r'\b(for|with|and|in|of|the|a|an)\b', ' ', clean_corrected, flags=re.IGNORECASE)
+    simplified_q = re.sub(r'\s+', ' ', simplified_q).strip()
+    if simplified_q.lower() not in [a.lower() for a in attempts] and len(simplified_q.split()) >= 1:
+        attempts.append(simplified_q)
 
-    # 1. Primary: Live Google Shopping Engine (SerpAPI)
-    serpapi_results = _fetch_serpapi_shopping(clean_query, num=60)
-    if serpapi_results:
-        products = []
-        for idx, item in enumerate(serpapi_results):
-            title = item.get("title", f"{clean_query.title()} Product")
-            source = item.get("source") or item.get("merchant") or "Online Store"
-            
-            # Exact direct retailer URL strictly belonging to THIS result (Bypasses Google Shopping)
-            link = extract_direct_retailer_url(item, source_store=source, product_title=title)
-            
-            # Exact image belonging strictly to THIS specific SerpAPI result item
-            image_url = extract_item_image(item)
+    final_products = []
+    successful_query = clean_original
+    was_corrected = False
 
-            rating = float(item.get("rating") or 4.5)
-            reviews = int(item.get("reviews") or 150)
+    # Execute search with hard limit of maximum 3 attempts
+    for attempt_idx, search_q in enumerate(attempts[:3]):
+        raw_results = _fetch_serpapi_shopping(search_q, num=60)
+        if raw_results:
+            successful_query = search_q
+            if attempt_idx > 0:
+                was_corrected = True
+            final_products = _process_serpapi_results(raw_results, search_q, target_curr)
+            if final_products:
+                break
 
-            # Parse and convert price
-            price_str = str(item.get("price") or item.get("extracted_price") or "")
-            raw_val = 0.0
-            if item.get("extracted_price") and isinstance(item.get("extracted_price"), (int, float)):
-                raw_val = float(item.get("extracted_price"))
-            else:
-                try:
-                    nums = re.findall(r"[\d,]+\.?\d*", price_str.replace(",", ""))
-                    if nums:
-                        raw_val = float(nums[0])
-                except Exception:
-                    raw_val = 0.0
+    if final_products:
+        apply_sorting_and_badges(final_products, sort_by)
+        return {
+            "status": "success",
+            "source_type": "🔴 Live Direct Store Deals & Verified Prices",
+            "query": raw_query,
+            "corrected_query": successful_query if was_corrected else None,
+            "total_results": len(final_products),
+            "products": final_products
+        }
 
-            if not raw_val:
-                raw_val = 25.0
-
-            source_curr = detect_currency_from_price_string(price_str)
-            converted_val = convert_price(raw_val, source_curr, target_curr)
-
-            discount_pct = 10 + (idx * 3 % 25)
-            original_val = round(converted_val * (1 + discount_pct / 100.0), 2)
-
-            products.append({
-                "title": title,
-                "source": source,
-                "price": format_converted_price(converted_val, target_curr),
-                "price_val": converted_val,
-                "original_price": format_converted_price(original_val, target_curr),
-                "discount": f"{discount_pct}% OFF",
-                "link": link,
-                "thumbnail": image_url,
-                "rating": rating,
-                "reviews": reviews,
-                "delivery": item.get("delivery") or f"Available on {source}",
-                "badge": None
-            })
-
-        if products:
-            apply_sorting_and_badges(products, sort_by)
-            return {
-                "status": "success",
-                "source_type": "🔴 Live Direct Store Deals & Verified Prices",
-                "query": clean_query,
-                "total_results": len(products),
-                "products": products
-            }
-
-    # 2. If no SerpAPI results or API unavailable, return empty state with zero guessing
+    # If truly 0 results across all attempts, return safe empty response
     return {
         "status": "success",
         "source_type": "Live Shopping Deals",
-        "query": clean_query,
+        "query": raw_query,
+        "corrected_query": None,
         "total_results": 0,
         "products": []
     }
