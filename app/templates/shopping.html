@@ -113,7 +113,7 @@
             <!-- Thumbnail with Direct Store Link -->
             <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer" class="deal-image-link" style="display: block; text-decoration: none;" title="Open on {{ item.source }}">
                 <div class="deal-image-wrapper">
-                    <img src="{{ item.thumbnail }}" alt="{{ item.title }}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=500&auto=format&fit=crop&q=80'">
+                    <img src="{{ item.thumbnail }}" alt="{{ item.title }}" loading="lazy" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'400\' viewBox=\'0 0 400 400\' fill=\'%231e293b\'><rect width=\'400\' height=\'400\' fill=\'%231e293b\'/><text x=\'50%\' y=\'45%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%2394a3b8\' font-size=\'44\' font-family=\'sans-serif\'>🛍️</text><text x=\'50%\' y=\'60%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%2394a3b8\' font-size=\'15\' font-family=\'sans-serif\' font-weight=\'600\'>Image Unavailable</text></svg>';">
                 </div>
             </a>
 
@@ -146,10 +146,10 @@
             </div>
         </div>
         {% else %}
-        <div class="no-deals-card glass">
-            <i class="fas fa-magnifying-glass-arrow-right"></i>
-            <h3>No matching products found</h3>
-            <p>Try searching for "makeup", "laptop", "smart phone", "shoes", or "headphones".</p>
+        <div class="no-deals-card glass" style="text-align: center; padding: 50px 20px; grid-column: 1 / -1;">
+            <i class="fas fa-box-open" style="font-size: 52px; color: #818cf8; margin-bottom: 18px; display: block;"></i>
+            <h3 style="font-size: 20px; margin-bottom: 10px; color: #f8fafc;">No live products found for "{{ current_query }}"</h3>
+            <p style="color: #94a3b8; font-size: 14px;">Try searching for another product name or check your search spelling (e.g. perfume, laptop, shoes, smartphone, watch, headphones).</p>
         </div>
         {% endfor %}
     </div>
