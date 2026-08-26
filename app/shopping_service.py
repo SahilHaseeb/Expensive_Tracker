@@ -194,8 +194,30 @@ def resolve_official_store_url(source_store, product_title, raw_link=None):
     return get_direct_store_url(source_store, product_title)
 
 
-# ─── UNIVERSAL CLEAN PRODUCT IMAGE POOLS (100% Relevant Category Photos) ────
+# ─── UNIVERSAL CLEAN PRODUCT IMAGE POOLS (Pure Isolated Studio Products — ZERO Human Faces) ────
 CATEGORY_PRODUCT_PHOTOS = {
+    "anime_shirt": [
+        "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1529374255404-311a2a4f1fd9?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1562157873-818bc0726f68?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=500&auto=format&fit=crop&q=80"
+    ],
+    "tshirt": [
+        "https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1562157873-818bc0726f68?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1529374255404-311a2a4f1fd9?w=500&auto=format&fit=crop&q=80"
+    ],
+    "chair": [
+        "https://images.unsplash.com/photo-1580481077195-731da89f3838?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1503602642458-232111445657?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1592078615290-033ee584e267?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=500&auto=format&fit=crop&q=80"
+    ],
     "laptop": [
         "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=500&auto=format&fit=crop&q=80",
         "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=500&auto=format&fit=crop&q=80",
@@ -208,7 +230,6 @@ CATEGORY_PRODUCT_PHOTOS = {
     ],
     "undergarments": [
         "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=500&auto=format&fit=crop&q=80",
-        "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500&auto=format&fit=crop&q=80",
         "https://images.unsplash.com/photo-1562157873-818bc0726f68?w=500&auto=format&fit=crop&q=80",
         "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=500&auto=format&fit=crop&q=80",
         "https://images.unsplash.com/photo-1582533561751-ef6f6ab93a2e?w=500&auto=format&fit=crop&q=80",
@@ -277,9 +298,8 @@ CATEGORY_PRODUCT_PHOTOS = {
         "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=500&auto=format&fit=crop&q=80"
     ],
     "clothes": [
-        "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500&auto=format&fit=crop&q=80",
-        "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=500&auto=format&fit=crop&q=80",
         "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=500&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=500&auto=format&fit=crop&q=80",
         "https://images.unsplash.com/photo-1542272604-780c96856592?w=500&auto=format&fit=crop&q=80",
         "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=500&auto=format&fit=crop&q=80",
         "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=500&auto=format&fit=crop&q=80",
@@ -301,38 +321,47 @@ CATEGORY_PRODUCT_PHOTOS = {
 def get_dynamic_product_photo(query_or_title, index=0):
     """
     Intelligently map ANY search query or product title to its EXACT matching
-    high-resolution product photograph.
+    high-resolution product photograph (Pure Studio Product Photos — NO Faces).
     """
     q = (query_or_title or "").lower().strip()
 
-    # 1. Laptops, MacBooks & Computers
-    if any(k in q for k in ['laptop', 'laptops', 'macbook', 'notebook', 'ultrabook', 'thinkpad', 'dell xps', 'gaming laptop', 'computer', 'pc']):
+    # 1. Anime & Graphic Print T-Shirts
+    if any(k in q for k in ['anime', 'manga', 'naruto', 'goku', 'graphic tee', 'printed shirt', 'anime shirt', 'otaku', 'graphic t-shirt']):
+        pool = CATEGORY_PRODUCT_PHOTOS["anime_shirt"]
+    # 2. T-Shirts & Shirts
+    elif any(k in q for k in ['tshirt', 't-shirt', 'tee', 'tees', 't shirt', 'cotton shirt', 'polo']):
+        pool = CATEGORY_PRODUCT_PHOTOS["tshirt"]
+    # 3. Chairs, Sofas & Desks
+    elif any(k in q for k in ['chair', 'chairs', 'swivel', 'sofa', 'desk', 'table', 'furniture', 'stool', 'armchair', 'ergonomic']):
+        pool = CATEGORY_PRODUCT_PHOTOS["chair"]
+    # 4. Laptops, MacBooks & Computers
+    elif any(k in q for k in ['laptop', 'laptops', 'macbook', 'notebook', 'ultrabook', 'thinkpad', 'dell xps', 'gaming laptop', 'computer', 'pc']):
         pool = CATEGORY_PRODUCT_PHOTOS["laptop"]
-    # 2. Undergarments & Innerwear
+    # 5. Undergarments & Innerwear
     elif any(k in q for k in ['under', 'ware', 'wear', 'boxer', 'brief', 'bra', 'lingerie', 'vest', 'panty', 'trunks', 'panties', 'banyan']):
         pool = CATEGORY_PRODUCT_PHOTOS["undergarments"]
-    # 3. Smartwatches & Watches
+    # 6. Smartwatches & Watches
     elif any(k in q for k in ['smartwatch', 'smart watch', 'fitbit', 'garmin', 'apple watch', 'galaxy watch', 'band']) or ('watch' in q and 'under' not in q and 'cloth' not in q and 'mac' not in q):
         pool = CATEGORY_PRODUCT_PHOTOS["smart_watch"]
-    # 4. Earbuds, Headphones & Audio
+    # 7. Earbuds, Headphones & Audio
     elif any(k in q for k in ['earbud', 'earbuds', 'airpod', 'airpods', 'headphone', 'headphones', 'earphone', 'tws', 'soundcore', 'galaxy buds', 'buds', 'handsfree']):
         pool = CATEGORY_PRODUCT_PHOTOS["earbuds"]
-    # 5. Mobile Phones & Smartphones
+    # 8. Mobile Phones & Smartphones
     elif any(k in q for k in ['phone', 'phones', 'iphone', 'samsung', 'smartphone', 'smartphones', 'mobile', 'mobiles', 'pixel', 'oneplus', 'redmi', 'infinix', 'realme']):
         pool = CATEGORY_PRODUCT_PHOTOS["phone"]
-    # 6. Shoes & Sneakers
+    # 9. Shoes & Sneakers
     elif any(k in q for k in ['shoe', 'shoes', 'sneaker', 'sneakers', 'nike', 'adidas', 'boot', 'boots', 'sandal', 'sandals', 'chappal', 'footwear', 'jogger']):
         pool = CATEGORY_PRODUCT_PHOTOS["shoes"]
-    # 7. Perfumes & Fragrances
+    # 10. Perfumes & Fragrances
     elif any(k in q for k in ['perfume', 'perfumes', 'scent', 'fragrance', 'cologne', 'attar', 'janan', 'zarar', 'sauvage', 'dior', 'oud', 'spray']):
         pool = CATEGORY_PRODUCT_PHOTOS["perfume"]
-    # 8. Makeup & Cosmetics
+    # 11. Makeup & Cosmetics
     elif any(k in q for k in ['makeup', 'cosmetic', 'lipstick', 'mascara', 'foundation', 'eyeshadow', 'blush', 'beauty', 'skincare']):
         pool = CATEGORY_PRODUCT_PHOTOS["makeup"]
-    # 9. Hair Oils & Serums
+    # 12. Hair Oils & Serums
     elif any(k in q for k in ['oil', 'hair', 'serum', 'shampoo', 'conditioner', 'amla', 'castor', 'argan']):
         pool = CATEGORY_PRODUCT_PHOTOS["hair_oil"]
-    # 10. Clothes & Apparel (Default)
+    # 13. Clothes & Apparel (Default)
     else:
         pool = CATEGORY_PRODUCT_PHOTOS["clothes"]
 
