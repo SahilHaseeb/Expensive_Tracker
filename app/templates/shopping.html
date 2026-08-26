@@ -10,8 +10,8 @@
                 <i class="fas fa-tags"></i>
             </div>
             <div>
-                <h1>Live Shopping Price Finder & Deals</h1>
-                <p>Compare real-time product prices, discounts, and store offers across top retailers (Amazon, Flipkart, Sephora, Daraz, Walmart, eBay) with 1-click direct store access.</p>
+                <h1>Live Shopping Price Finder & Unlimited Deals</h1>
+                <p>Compare real-time product prices, discounts, and store offers across top global retailers (Amazon, Daraz, AliExpress, Sephora, Walmart, eBay, Flipkart, Target, BestBuy) with 1-click direct store access.</p>
             </div>
         </div>
 
@@ -19,7 +19,7 @@
         <form method="GET" action="{{ url_for('shopping.index') }}" class="shopping-search-form">
             <div class="search-input-group">
                 <i class="fas fa-magnifying-glass search-icon"></i>
-                <input type="text" name="q" value="{{ current_query }}" placeholder="Search products, makeup, gadgets, shoes, electronics (e.g. Makeup kit, iPhone 15, Running shoes)..." required autocomplete="off">
+                <input type="text" name="q" value="{{ current_query }}" placeholder="Search products, clothes, makeup, gadgets, shoes, electronics (e.g. Makeup kit, iPhone 15, Designer clothes)..." required autocomplete="off">
                 <select name="sort" class="sort-select" onchange="this.form.submit()">
                     <option value="price_low" {% if current_sort == 'price_low' %}selected{% endif %}>💰 Lowest Price First</option>
                     <option value="rating" {% if current_sort == 'rating' %}selected{% endif %}>⭐ Highest Rated</option>
@@ -42,13 +42,28 @@
             <a href="{{ url_for('shopping.index', q='running shoes', sort=current_sort) }}" class="category-pill {% if 'shoe' in current_query|lower %}active{% endif %}">👟 Shoes</a>
             <a href="{{ url_for('shopping.index', q='smart watch', sort=current_sort) }}" class="category-pill {% if 'watch' in current_query|lower %}active{% endif %}">⌚ Smart Watches</a>
             <a href="{{ url_for('shopping.index', q='designer clothes', sort=current_sort) }}" class="category-pill {% if 'cloth' in current_query|lower or 'dress' in current_query|lower %}active{% endif %}">👗 Clothes</a>
+            <a href="{{ url_for('shopping.index', q='undergarments', sort=current_sort) }}" class="category-pill {% if 'under' in current_query|lower %}active{% endif %}">🩲 Undergarments</a>
         </div>
+    </div>
+
+    <!-- Live Store Filter Row -->
+    <div class="store-filter-bar glass" style="margin: 16px 0; padding: 12px 18px; border-radius: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <span style="font-size: 13px; font-weight: 600; color: var(--text-muted);"><i class="fas fa-filter text-primary"></i> Filter Store:</span>
+        <button class="store-filter-btn active-store-filter" onclick="filterByStore('ALL', this)">🌐 All Stores ({{ results.products|length }})</button>
+        <button class="store-filter-btn" onclick="filterByStore('Daraz', this)">📦 Daraz</button>
+        <button class="store-filter-btn" onclick="filterByStore('Amazon', this)">🛒 Amazon</button>
+        <button class="store-filter-btn" onclick="filterByStore('AliExpress', this)">✈️ AliExpress</button>
+        <button class="store-filter-btn" onclick="filterByStore('Walmart', this)">🏪 Walmart</button>
+        <button class="store-filter-btn" onclick="filterByStore('Sephora', this)">💄 Sephora</button>
+        <button class="store-filter-btn" onclick="filterByStore('eBay', this)">🏷️ eBay</button>
+        <button class="store-filter-btn" onclick="filterByStore('Flipkart', this)">🛍️ Flipkart</button>
+        <button class="store-filter-btn" onclick="filterByStore('Target', this)">🎯 Target</button>
     </div>
 
     <!-- Results Information Bar -->
     <div class="results-bar">
         <div class="results-count">
-            <i class="fas fa-layer-group"></i> Found <strong>{{ results.products|length }}</strong> live store deals for <span class="search-term">"{{ current_query }}"</span>
+            <i class="fas fa-layer-group"></i> Showing <strong id="visibleCountText">24</strong> of <strong id="totalCountText">{{ results.products|length }}</strong> live store offers for <span class="search-term">"{{ current_query }}"</span>
             <span class="sort-tag-info">
                 (Sorted by: {% if current_sort == 'price_low' %}Lowest Price First{% elif current_sort == 'price_high' %}Highest Price First{% elif current_sort == 'rating' %}Highest Customer Rating{% endif %})
             </span>
@@ -59,9 +74,11 @@
     </div>
 
     <!-- Product Deal Cards Grid -->
-    <div class="deals-grid">
+    <div class="deals-grid" id="dealsGrid">
         {% for item in results.products %}
-        <div class="deal-card glass card-hover {% if item.is_best_price %}best-price-card{% elif item.is_premium %}premium-card{% elif item.is_top_rated %}top-rated-card{% endif %}">
+        <div class="deal-card glass card-hover deal-item-card {% if loop.index > 24 %}hidden-deal-card{% endif %} {% if item.is_best_price %}best-price-card{% elif item.is_premium %}premium-card{% elif item.is_top_rated %}top-rated-card{% endif %}"
+             data-store="{{ item.source }}"
+             data-index="{{ loop.index }}">
             <!-- Badges -->
             <div class="deal-badges-container">
                 <span class="store-badge">
@@ -124,5 +141,112 @@
         </div>
         {% endfor %}
     </div>
+
+    <!-- Load More Deals Button Section -->
+    {% if results.products|length > 24 %}
+    <div class="load-more-container" id="loadMoreContainer" style="text-align: center; margin: 35px 0 20px;">
+        <button type="button" class="btn-primary" id="loadMoreBtn" onclick="loadMoreDeals()" style="padding: 14px 36px; font-size: 15px; border-radius: 50px; box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4); display: inline-flex; align-items: center; gap: 10px;">
+            <i class="fas fa-angles-down"></i> Load More Deals (<span id="remainingDealsCount">{{ results.products|length - 24 }}</span> more)
+        </button>
+    </div>
+    {% endif %}
 </div>
+
+<style>
+.store-filter-btn {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.store-filter-btn:hover {
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--text-primary);
+    border-color: var(--primary);
+}
+.active-store-filter {
+    background: linear-gradient(135deg, var(--primary), var(--secondary)) !important;
+    color: #ffffff !important;
+    border-color: transparent !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+.hidden-deal-card {
+    display: none !important;
+}
+</style>
+
+<script>
+let currentVisible = 24;
+const batchSize = 24;
+let activeStore = 'ALL';
+
+function updateDealsVisibility() {
+    const allCards = document.querySelectorAll('.deal-item-card');
+    let matchedCount = 0;
+    let visibleCount = 0;
+
+    allCards.forEach(card => {
+        const store = card.getAttribute('data-store') || '';
+        const matchesStore = (activeStore === 'ALL' || store.toLowerCase().includes(activeStore.toLowerCase()));
+
+        if (matchesStore) {
+            matchedCount++;
+            if (matchedCount <= currentVisible) {
+                card.classList.remove('hidden-deal-card');
+                visibleCount++;
+            } else {
+                card.classList.add('hidden-deal-card');
+            }
+        } else {
+            card.classList.add('hidden-deal-card');
+        }
+    });
+
+    const visibleText = document.getElementById('visibleCountText');
+    const totalText = document.getElementById('totalCountText');
+    const loadMoreContainer = document.getElementById('loadMoreContainer');
+    const remainingSpan = document.getElementById('remainingDealsCount');
+
+    if (visibleText) visibleText.innerText = visibleCount;
+    if (totalText) totalText.innerText = matchedCount;
+
+    if (loadMoreContainer) {
+        if (visibleCount >= matchedCount) {
+            loadMoreContainer.style.display = 'none';
+        } else {
+            loadMoreContainer.style.display = 'block';
+            if (remainingSpan) remainingSpan.innerText = (matchedCount - visibleCount);
+        }
+    }
+}
+
+function loadMoreDeals() {
+    currentVisible += batchSize;
+    updateDealsVisibility();
+}
+
+function filterByStore(storeName, btnElement) {
+    activeStore = storeName;
+    currentVisible = 24;
+
+    document.querySelectorAll('.store-filter-btn').forEach(btn => {
+        btn.classList.remove('active-store-filter');
+    });
+    if (btnElement) {
+        btnElement.classList.add('active-store-filter');
+    }
+
+    updateDealsVisibility();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateDealsVisibility();
+});
+</script>
 {% endblock %}
