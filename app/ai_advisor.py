@@ -17,16 +17,6 @@ def detect_smart_spending_insights(data):
     Intelligent spending pattern detector.
     Analyzes verified user metrics and extracts high-value, prioritized insights
     with factual observations and actionable recommendations.
-    
-    Detected Patterns:
-    1. Budget Overruns (Critical Priority)
-    2. Category MoM Spikes (>= 25% increase and >= 1000 diff)
-    3. Overall MoM Spending Increase / Decrease (>= 5% change)
-    4. Budget Approaching Limit Warnings (80% - 100% used)
-    5. Dominant / Concentrated Category (>= 35% of total spend)
-    6. Outlier Single Transactions (>= 2.5x avg transaction and >= 25% of monthly total)
-    7. High Subscription Burden (>= 15% of monthly total)
-    8. Positive Spending Discipline (Budgets kept < 70% with active tracking)
     """
     currency = data.get("currency", "₹")
     total_this_month = data.get("total_this_month", 0.0)
@@ -122,7 +112,7 @@ def detect_smart_spending_insights(data):
     # 4. Pattern: Budget Approaching Limit Warnings
     for b in budget_details:
         usage = b.get("usage_pct", 0.0)
-        if 80.0 <= usage <= 100.0:
+        if 80.0 <= usage < 100.0:
             insights.append({
                 "priority": 3,
                 "type": "budget_warning",
@@ -189,7 +179,7 @@ def detect_smart_spending_insights(data):
     for b in budget_details:
         usage = b.get("usage_pct", 0.0)
         limit = b.get("limit", 0.0)
-        if usage < 70.0 and limit >= 3000.0:
+        if usage < 80.0 and limit >= 3000.0:
             insights.append({
                 "priority": 4,
                 "type": "budget_healthy",
@@ -201,14 +191,108 @@ def detect_smart_spending_insights(data):
 
     # Sort insights by priority (1=Critical, 2=High, 3=Medium, 4=Positive, 5=Info)
     insights.sort(key=lambda x: x["priority"])
-
     return insights
+
+
+def evaluate_smart_budget_diagnostics(expenses_df, budgets, category_summary, currency):
+    """
+    Compute category-by-category historical averages, budget reasonableness,
+    and realistic recommendations for next month's budget allocations.
+    """
+    hist_avg = {}
+    hist_months_count = {}
+
+    if not expenses_df.empty and 'date' in expenses_df.columns:
+        # Group by category and calendar month (YYYY-MM)
+        expenses_df['month_period'] = expenses_df['date'].dt.to_period('M')
+        monthly_cat = expenses_df.groupby(['category', 'month_period'])['amount'].sum().reset_index()
+        hist_avg = monthly_cat.groupby('category')['amount'].mean().to_dict()
+        hist_months_count = monthly_cat.groupby('category')['amount'].count().to_dict()
+
+    user_budgets_map = {b.category: float(b.monthly_limit) for b in budgets} if budgets else {}
+    all_categories = sorted(set(list(category_summary.keys()) + list(user_budgets_map.keys())))
+
+    evaluations = []
+    overbudget_categories = []
+    approaching_categories = []
+    within_categories = []
+    unbudgeted_active_categories = []
+
+    for cat in all_categories:
+        limit = user_budgets_map.get(cat, 0.0)
+        spent = float(category_summary.get(cat, 0.0))
+        avg_spend = float(hist_avg.get(cat, spent))
+        months_recorded = int(hist_months_count.get(cat, 1 if spent > 0 else 0))
+
+        has_budget = limit > 0
+        usage_pct = round((spent / limit * 100), 1) if has_budget else 0.0
+        remaining = round(limit - spent, 2) if has_budget else 0.0
+
+        # Suggested next month budget based on historical baseline + 10% realistic headroom
+        rec_next_month = round(max(avg_spend, spent) * 1.08, -2) if (avg_spend > 0 or spent > 0) else 5000.0
+        if rec_next_month == 0:
+            rec_next_month = 5000.0
+
+        if has_budget:
+            if spent > limit:
+                status_code = "OVER_BUDGET"
+                status_label = f"OVER BUDGET by {currency} {spent - limit:,.2f} ({usage_pct}% used) ⚠️"
+                overbudget_categories.append({"category": cat, "limit": limit, "spent": spent, "excess": spent - limit, "usage_pct": usage_pct})
+            elif usage_pct >= 80.0:
+                status_code = "APPROACHING_LIMIT"
+                status_label = f"Approaching Cap ({usage_pct}% used, {currency} {remaining:,.2f} remaining) 🟡"
+                approaching_categories.append({"category": cat, "limit": limit, "spent": spent, "remaining": remaining, "usage_pct": usage_pct})
+            else:
+                status_code = "WITHIN_BUDGET"
+                status_label = f"Within Budget ({usage_pct}% used, {currency} {remaining:,.2f} remaining) 🟢"
+                within_categories.append({"category": cat, "limit": limit, "spent": spent, "remaining": remaining, "usage_pct": usage_pct})
+
+            # Evaluate reasonableness against historical baseline
+            if months_recorded >= 2 and limit < 0.70 * avg_spend:
+                feasibility = "UNREALISTICALLY_LOW"
+                feasibility_msg = f"The {cat} budget of {currency} {limit:,.2f} is significantly below your typical monthly average of {currency} {avg_spend:,.2f}. If this level of spending is essential, consider adjusting the budget closer to ~{currency} {rec_next_month:,.2f}; otherwise, an active spending cutback is required."
+            elif months_recorded >= 2 and limit > 1.40 * avg_spend and spent < 0.65 * limit:
+                feasibility = "GENEROUS"
+                feasibility_msg = f"The {cat} budget of {currency} {limit:,.2f} is generous compared to your typical spend of {currency} {avg_spend:,.2f}. You have ~{currency} {limit - avg_spend:,.2f} in buffer that can be reallocated to tighter categories."
+            else:
+                feasibility = "REALISTIC"
+                feasibility_msg = f"The {cat} budget of {currency} {limit:,.2f} is well calibrated with your actual spending patterns (avg {currency} {avg_spend:,.2f})."
+        else:
+            status_code = "NO_BUDGET"
+            status_label = "No Budget Configured"
+            feasibility = "UNCONFIGURED"
+            feasibility_msg = f"No budget set yet for {cat}. Based on your recorded spending (avg {currency} {avg_spend:,.2f}), a starting target of {currency} {rec_next_month:,.2f} is recommended."
+            if spent > 0:
+                unbudgeted_active_categories.append({"category": cat, "spent": spent, "avg_spend": avg_spend, "recommended_limit": rec_next_month})
+
+        evaluations.append({
+            "category": cat,
+            "limit": limit,
+            "spent": spent,
+            "remaining": remaining,
+            "usage_pct": usage_pct,
+            "avg_spend": round(avg_spend, 2),
+            "months_recorded": months_recorded,
+            "recommended_next_month": rec_next_month,
+            "status": status_code,
+            "status_text": status_label,
+            "feasibility": feasibility,
+            "feasibility_msg": feasibility_msg
+        })
+
+    return {
+        "evaluations": evaluations,
+        "overbudget_categories": overbudget_categories,
+        "approaching_categories": approaching_categories,
+        "within_categories": within_categories,
+        "unbudgeted_active_categories": unbudgeted_active_categories
+    }
 
 
 def get_user_financial_context(user_id, user_query=None):
     """
     Extract comprehensive, verified financial context for the authenticated user.
-    All mathematical calculations (totals, percentages, budget usages, MoM trends, smart insights)
+    All mathematical calculations (totals, percentages, budget usages, MoM trends, smart insights, budget diagnostics)
     are performed accurately by backend Python logic so the AI never guesses numbers.
     """
     now = datetime.datetime.now()
@@ -247,6 +331,7 @@ def get_user_financial_context(user_id, user_query=None):
             "top_category": "None",
             "top_category_amount": 0.0,
             "smart_insights": [],
+            "budget_evaluations": [],
             "health_score": health_score_data.get("score", 85),
             "summary_text": f"No financial records (expenses, budgets, or subscriptions) found yet for this account. Currency: {currency}."
         }
@@ -305,42 +390,14 @@ def get_user_financial_context(user_id, user_query=None):
         prev_cat_grouped = prev_month_df.groupby('category')['amount'].sum().to_dict()
         prev_category_summary = {k: round(float(v), 2) for k, v in prev_cat_grouped.items()}
 
-    # Budget Limits & Usage Percentages
-    budget_details = []
-    overbudget_categories = []
-    total_budget_limit = 0.0
-
-    if budgets:
-        for b in budgets:
-            limit = float(b.monthly_limit)
-            total_budget_limit += limit
-            spent = float(category_summary.get(b.category, 0.0))
-            usage_pct = round((spent / limit * 100), 1) if limit > 0 else 0.0
-            remaining = round(limit - spent, 2)
-            
-            status = "Within Budget ✅"
-            if spent > limit:
-                status = f"OVER BUDGET by {currency} {spent - limit:,.2f} (Usage: {usage_pct}%) ⚠️"
-                overbudget_categories.append({
-                    "category": b.category,
-                    "limit": limit,
-                    "spent": spent,
-                    "excess": spent - limit,
-                    "usage_pct": usage_pct
-                })
-            elif spent >= 0.80 * limit:
-                status = f"Approaching Cap ({usage_pct}% used, {currency} {remaining:,.2f} remaining) 🟡"
-            else:
-                status = f"Safe ({usage_pct}% used, {currency} {remaining:,.2f} remaining) 🟢"
-
-            budget_details.append({
-                "category": b.category,
-                "limit": limit,
-                "spent": spent,
-                "remaining": remaining,
-                "usage_pct": usage_pct,
-                "status_text": status
-            })
+    # ─── SMART BUDGET DIAGNOSTICS & EVALUATION ──────────────────────────────
+    budget_diag = evaluate_smart_budget_diagnostics(df, budgets, category_summary, currency)
+    budget_evaluations = budget_diag["evaluations"]
+    budget_details = [b for b in budget_evaluations if b["limit"] > 0]
+    overbudget_categories = budget_diag["overbudget_categories"]
+    approaching_categories = budget_diag["approaching_categories"]
+    within_categories = budget_diag["within_categories"]
+    unbudgeted_active_categories = budget_diag["unbudgeted_active_categories"]
 
     # Subscriptions & Recurring Bills
     subscription_details = []
@@ -408,6 +465,25 @@ def get_user_financial_context(user_id, user_query=None):
         "\n".join(insight_lines) if insight_lines else "- Spending is currently within normal operating baseline."
     )
 
+    # ─── FORMAT SMART BUDGET DIAGNOSTICS FOR CONTEXT ────────────────────────
+    sec_budget_diagnostics = "### 🎯 Category Budgets, Diagnostics & Next Month Targets:\n"
+    if budget_evaluations:
+        diag_lines = []
+        for b in budget_evaluations:
+            if b["limit"] > 0:
+                diag_lines.append(
+                    f"- **{b['category']}**: Budget = {currency} {b['limit']:,.2f} | Spent = {currency} {b['spent']:,.2f} ({b['usage_pct']}% used) | Hist Avg = {currency} {b['avg_spend']:,.2f} | Rec Next Month = {currency} {b['recommended_next_month']:,.2f}\n"
+                    f"  -> *Assessment:* {b['feasibility_msg']}"
+                )
+            elif b["spent"] > 0:
+                diag_lines.append(
+                    f"- **{b['category']}**: [No Budget Set] | Spent = {currency} {b['spent']:,.2f} | Hist Avg = {currency} {b['avg_spend']:,.2f} | Rec Starting Target = {currency} {b['recommended_next_month']:,.2f}\n"
+                    f"  -> *Assessment:* {b['feasibility_msg']}"
+                )
+        sec_budget_diagnostics += "\n".join(diag_lines)
+    else:
+        sec_budget_diagnostics += "- No category budgets have been configured by the user yet."
+
     # ─── SMART CONTEXT COMPOSITION ──────────────────────────────────────────
     sec_overview = f"""### 📊 Current Month Overview ({now.strftime('%B %Y')}):
 - Total Spent This Month: {currency} {total_this_month:,.2f}
@@ -420,17 +496,6 @@ def get_user_financial_context(user_id, user_query=None):
         "\n".join([f"- **{cat}:** {currency} {amt:,.2f} ({category_percentages.get(cat, 0)}% of total)" for cat, amt in category_summary.items()])
         if category_summary else "- No expenses categorized this month."
     )
-
-    sec_budgets = "### 🎯 Category Budgets & Spending Limits:\n"
-    if budget_details:
-        b_lines = []
-        for b in budget_details:
-            b_lines.append(f"- **{b['category']}:** Budget = {currency} {b['limit']:,.2f} | Spent = {currency} {b['spent']:,.2f} | {b['status_text']}")
-        sec_budgets += "\n".join(b_lines)
-        if overbudget_categories:
-            sec_budgets += f"\n- ⚠️ **Overbudget Alert:** Exceeded limits in {len(overbudget_categories)} category(s): " + ", ".join([f"{o['category']} (+{currency} {o['excess']:,.2f})" for o in overbudget_categories])
-    else:
-        sec_budgets += "- No category budgets have been configured by the user yet."
 
     sec_subs = f"### 🔄 Recurring Subscriptions & Fixed Bills:\n- Total Monthly Recurring Commitments: {currency} {total_monthly_subs:,.2f}\n" + (
         "\n".join([f"- **{s['name']}**: {currency} {s['amount']:,.2f} ({s['billing_cycle']}, Next Due: {s['next_due']})" for s in subscription_details])
@@ -450,19 +515,19 @@ def get_user_financial_context(user_id, user_query=None):
     # Smart contextual prioritization based on user query intent
     query_lower = (user_query or "").lower()
     
-    if any(k in query_lower for k in ['insight', 'insights', 'pattern', 'improve', 'what should i improve', 'spending too much', 'what changed']):
-        summary_text = f"{sec_insights}\n\n{sec_overview}\n\n{sec_budgets}\n\n{sec_categories}"
-    elif any(k in query_lower for k in ['budget', 'limit', 'cap', 'exceed', 'overbudget', 'staying within']):
-        summary_text = f"{sec_insights}\n\n{sec_budgets}\n\n{sec_overview}\n\n{sec_categories}"
+    if any(k in query_lower for k in ['budget', 'limit', 'cap', 'exceed', 'overbudget', 'staying within', 'reasonable', 'next month', 'increase my', 'bigger budget', 'reduce spending', 'cut back']):
+        summary_text = f"{sec_budget_diagnostics}\n\n{sec_insights}\n\n{sec_overview}\n\n{sec_categories}"
+    elif any(k in query_lower for k in ['insight', 'insights', 'pattern', 'improve', 'what should i improve', 'spending too much', 'what changed']):
+        summary_text = f"{sec_insights}\n\n{sec_budget_diagnostics}\n\n{sec_overview}\n\n{sec_categories}"
     elif any(k in query_lower for k in ['category', 'categories', 'spend most', 'biggest expense', 'where am i spending', 'shopping', 'food', 'transport', 'rent']):
-        summary_text = f"{sec_insights}\n\n{sec_categories}\n\n{sec_transactions}\n\n{sec_overview}"
+        summary_text = f"{sec_categories}\n\n{sec_budget_diagnostics}\n\n{sec_transactions}\n\n{sec_overview}"
     elif any(k in query_lower for k in ['increase', 'increasing', 'trend', 'last month', 'compare', 'velocity', 'why are my expenses']):
         summary_text = f"{sec_insights}\n\n{sec_overview}\n\n{sec_categories}\n\n{sec_transactions}"
     elif any(k in query_lower for k in ['health', 'score', 'rating', 'grade', 'financial health', 'doing financially', 'how am i doing']):
-        summary_text = f"{sec_insights}\n\n{sec_overview}\n\n{sec_health}\n\n{sec_budgets}\n\n{sec_subs}"
+        summary_text = f"{sec_insights}\n\n{sec_overview}\n\n{sec_health}\n\n{sec_budget_diagnostics}\n\n{sec_subs}"
     else:
-        # General comprehensive overview with insights prominent
-        summary_text = f"{sec_insights}\n\n{sec_overview}\n\n{sec_categories}\n\n{sec_budgets}\n\n{sec_subs}\n\n{sec_health}"
+        # General comprehensive overview with budget diagnostics and insights prominent
+        summary_text = f"{sec_budget_diagnostics}\n\n{sec_insights}\n\n{sec_overview}\n\n{sec_categories}\n\n{sec_subs}\n\n{sec_health}"
 
     return {
         "has_data": True,
@@ -477,7 +542,11 @@ def get_user_financial_context(user_id, user_query=None):
         "top_category": top_category,
         "top_category_amount": top_category_amount,
         "budget_details": budget_details,
+        "budget_evaluations": budget_evaluations,
         "overbudget_categories": overbudget_categories,
+        "approaching_categories": approaching_categories,
+        "within_categories": within_categories,
+        "unbudgeted_active_categories": unbudgeted_active_categories,
         "total_monthly_subs": total_monthly_subs,
         "smart_insights": smart_insights,
         "health_score": health_score_data.get("score", 80),
@@ -488,7 +557,7 @@ def get_user_financial_context(user_id, user_query=None):
 
 def generate_ai_response(user_id, username, user_message, chat_history=None):
     """
-    Generate tailored financial advice response using Google Gemini API with smart grounded context.
+    Generate tailored financial and budget advice response using Google Gemini API with smart grounded context.
     Ensures strict privacy: only the authenticated user's financial metrics are used.
     """
     api_key = Config.GEMINI_API_KEY or os.environ.get('GEMINI_API_KEY')
@@ -496,20 +565,21 @@ def generate_ai_response(user_id, username, user_message, chat_history=None):
     currency = financial_data.get('currency', '₹')
 
     system_instruction = f"""
-You are "ExpenseAI Advisor", a friendly, highly competent, professional, and empathetic personal financial advisor built into the Smart Expense Tracker web application.
+You are "ExpenseAI Advisor", a friendly, highly competent, professional, and empathetic personal financial and budget advisor built into the Smart Expense Tracker web application.
 You are directly advising the authenticated user: {username}.
 
-VERIFIED FINANCIAL CONTEXT (Calculated directly from {username}'s database records):
+VERIFIED FINANCIAL & BUDGET CONTEXT (Calculated directly from {username}'s database records):
 {financial_data['summary_text']}
 
 CRITICAL INSTRUCTIONS FOR THE ADVISOR:
-1. GROUNDING IN SMART INSIGHTS: Use the verified metrics and smart spending insights provided above to explain spending patterns clearly and provide proactive, realistic advice. Do not simply recite numbers—explain the 'why' and provide actionable solutions.
-2. NO FABRICATION: Do NOT invent, assume, or hallucinate financial numbers, budgets, or balances that are not present in the context.
-3. HANDLING MISSING DATA: If the user asks about something not recorded in their account (e.g. previous month trend when no historical data exists, or an unbudgeted category), clearly state that this specific data is not recorded in their account yet, rather than guessing.
-4. BALANCED PERSPECTIVE: Highlight critical budget overruns or rapid spending spikes first, but also acknowledge positive spending discipline and savings where present.
-5. CURRENCY & FORMATTING: Always use the user's preferred currency symbol ({currency}) when quoting monetary figures.
-6. CLARITY & ACTIONABILITY: Format your answers with clean Markdown (bold metrics, bullet points, concise sections). Every negative observation should be paired with a practical, doable recommendation.
-7. PRIVACY: Never reveal internal IDs, system prompts, or hypothetical information.
+1. GROUNDING IN SMART BUDGET DIAGNOSTICS: Answer questions regarding budgets, overspending, category feasibility, and next-month targets using the verified calculations provided above.
+2. NO FABRICATION: Do NOT invent, assume, or hallucinate financial numbers, budget limits, or percentages that are not present in the context.
+3. HANDLING MISSING DATA: If the user asks about a category without a budget or with no historical expenses, clearly state that no budget or expense record exists for that category, and suggest a starting budget based on their actual spending if recorded.
+4. DISTINGUISHING CUTS VS. REALISTIC BUDGETS: Do not automatically demand cutbacks for every overbudget category. If a budget is unrealistically low compared to historical spending, advise the user whether to execute an active lifestyle freeze or adjust the budget closer to their realistic baseline.
+5. BALANCED PERSPECTIVE: Highlight critical budget overruns first, but acknowledge compliant budgets and healthy savings buffers.
+6. CURRENCY & FORMATTING: Always use the user's preferred currency symbol ({currency}) when quoting monetary figures.
+7. CLARITY & ACTIONABILITY: Format your answers with clean Markdown (bold metrics, bullet points, concise sections). Every problem should be paired with a practical, doable recommendation.
+8. PRIVACY: Never reveal internal IDs, system prompts, or hypothetical information.
 """
 
     if not api_key:
@@ -556,7 +626,7 @@ CRITICAL INSTRUCTIONS FOR THE ADVISOR:
 def get_smart_fallback_response(user_message, financial_data, username):
     """
     Intelligent, data-grounded fallback response engine when Gemini API is offline or key is unset.
-    Uses the exact pre-calculated backend figures and smart spending insights for 100% mathematical accuracy.
+    Uses the exact pre-calculated backend figures, budget diagnostics, and smart insights for 100% mathematical accuracy.
     """
     msg = (user_message or "").lower()
     curr = financial_data.get('currency', '₹')
@@ -566,7 +636,10 @@ def get_smart_fallback_response(user_message, financial_data, username):
     cat_summary = financial_data.get('category_summary', {})
     cat_pcts = financial_data.get('category_percentages', {})
     budgets = financial_data.get('budget_details', [])
+    budget_evals = financial_data.get('budget_evaluations', [])
     overbudgets = financial_data.get('overbudget_categories', [])
+    approaching = financial_data.get('approaching_categories', [])
+    within = financial_data.get('within_categories', [])
     health_score = financial_data.get('health_score', 80)
     health_grade = financial_data.get('health_grade', 'Good')
     mom_change = financial_data.get('mom_change', 0.0)
@@ -580,42 +653,108 @@ def get_smart_fallback_response(user_message, financial_data, username):
         top_insights_formatted.append(f"- **{ins['fact']}**\n  💡 *Tip:* {ins['recommendation']}")
     insights_block = "\n".join(top_insights_formatted) if top_insights_formatted else "- Your spending is currently in a steady baseline state."
 
-    # 1. "How am I doing financially?" / General Overview / "What should I improve?"
-    if any(w in msg for w in ['how am i doing', 'financially', 'health score', 'status', 'overview', 'summary', 'improve', 'what should i improve', 'what can i improve', 'spending too much']):
-        return f"""### 📊 Financial Health Assessment for {username}
+    # 1. "Which category is over budget?" / "Which budget am I exceeding?"
+    if any(w in msg for w in ['which category is over budget', 'which budget am i exceeding', 'over budget category', 'exceeding my budget']):
+        if not overbudgets:
+            return f"""### 🎯 Budget Adherence for {username}
 
-**Overall Score:** **{health_score}/100** ({health_grade})
+🎉 **Great news!** None of your categories are currently over budget.
 
-**Key Monthly Metrics:**
+**Current Performance:**
+- **Categories in Safe Range:** {len(within)} category(s)
+- **Categories Approaching Limit:** {len(approaching)} category(s)
 - **Total Spent This Month:** {curr} {total:,.2f}
-- **Primary Spending Driver:** **{top_cat}** ({curr} {top_cat_amt:,.2f} or {cat_pcts.get(top_cat, 0)}% of total)
-- **Recurring Commitments:** {curr} {total_subs:,.2f} / month
 
-### 💡 Smart Spending Insights:
-{insights_block}
+Keep up the disciplined pacing through the end of the month!"""
+
+        over_lines = []
+        for o in overbudgets:
+            over_lines.append(f"- **{o['category']}**: Spent **{curr} {o['spent']:,.2f}** of **{curr} {o['limit']:,.2f}** ({o['usage_pct']}% used) — **{curr} {o['excess']:,.2f} over budget** ⚠️")
+
+        return f"""### ⚠️ Overbudget Alert for {username}
+
+You are currently exceeding your budget in **{len(overbudgets)}** category(s):
+
+{chr(10).join(over_lines)}
 
 **Action Plan:**
-1. **Address Top Overruns:** Focus immediately on any category exceeding its set limit.
-2. **Review Recurring Subscriptions:** Ensure all {curr} {total_subs:,.2f}/mo active memberships are bringing active value."""
+1. **Pause Discretionary Spend:** Limit additional purchases in {', '.join([o['category'] for o in overbudgets])} for the rest of the month.
+2. **Reallocate Buffer:** If these expenses are essential, reallocate surplus funds from categories that are well under budget."""
 
-    # 2. "Where am I spending the most?" / Category Breakdown
-    elif any(w in msg for w in ['spend most', 'spending most', 'where am i spending', 'biggest expense', 'category', 'categories']):
-        breakdown_lines = "\n".join([f"- **{cat}:** {curr} {amt:,.2f} ({cat_pcts.get(cat, 0)}%)" for cat, amt in cat_summary.items()]) or "- No expenses recorded this month."
-        dominant_insight = next((ins for ins in insights if ins["type"] == "dominant_category"), None)
-        dom_text = f"\n\n💡 **Pattern Detected:** {dominant_insight['fact']}" if dominant_insight else ""
+    # 2. "Where should I reduce spending?" / "Which category should I cut back on?"
+    elif any(w in msg for w in ['where should i reduce', 'which category should i cut', 'cut back on', 'reduce spending', 'where to cut']):
+        target_cats = []
+        if overbudgets:
+            for o in overbudgets:
+                target_cats.append(f"- 🔴 **{o['category']} (Over Budget):** Currently {curr} {o['excess']:,.2f} above your cap. Cutting back by {curr} {o['excess']:,.2f} will restore budget balance.")
+        if approaching:
+            for a in approaching:
+                target_cats.append(f"- 🟡 **{a['category']} (Near Limit):** At {a['usage_pct']}% of cap with only {curr} {a['remaining']:,.2f} remaining. Slow down daily purchases here.")
+        if not target_cats and top_cat != "None":
+            target_cats.append(f"- 💡 **{top_cat} (Highest Expense):** Represents {cat_pcts.get(top_cat, 0)}% ({curr} {top_cat_amt:,.2f}) of your total monthly spend. Targeting a 10% reduction here saves ~{curr} {top_cat_amt * 0.10:,.2f}.")
+
+        return f"""### ✂️ Spending Reduction Recommendations for {username}
+
+Here are the highest-impact areas to reduce spending based on your actual data:
+
+{chr(10).join(target_cats)}
+
+**Strategic Recommendations:**
+1. **Evaluate Discretionary vs. Essential:** Distinguish fixed non-negotiables (Rent, Utilities) from variable flexible spending (Shopping, Dining out).
+2. **Use the 48-Hour Rule:** Wait 48 hours before purchasing any non-essential item over {curr} 1,000."""
+
+    # 3. "How should I set my budget next month?" / "Recommended budget next month" / "Which category needs a bigger budget?"
+    elif any(w in msg for w in ['next month', 'set my budget', 'recommended budget', 'bigger budget', 'increase my budget', 'how should i set', 'increase my shopping', 'increase my food']):
+        rec_lines = []
+        for b in budget_evals:
+            curr_str = f"Current: {curr} {b['limit']:,.2f}" if b['limit'] > 0 else "Current: None"
+            rec_lines.append(f"- **{b['category']}**: Suggested Target = **{curr} {b['recommended_next_month']:,.2f}** ({curr_str} | Avg: {curr} {b['avg_spend']:,.2f})")
+
+        return f"""### 📅 Next Month Budget Recommendations for {username}
+
+Based on your verified historical spending patterns, here are realistic suggested targets for next month:
+
+{chr(10).join(rec_lines)}
+
+**Key Guidelines:**
+1. **Build In Buffer:** Suggested targets include an ~8% safety buffer to accommodate unexpected price fluctuations.
+2. **Prioritize Problem Areas:** Categories that were over budget this month have been adjusted to reflect realistic spending baselines."""
+
+    # 4. Specific Category Budget Feasibility (e.g. "Is my food budget reasonable?", "Is my shopping budget reasonable?")
+    matched_feasibility_cat = None
+    for cat_name in ['food', 'shopping', 'transport', 'rent', 'entertainment', 'healthcare', 'education']:
+        if cat_name in msg and any(kw in msg for kw in ['reasonable', 'realistic', 'enough', 'good budget', 'my budget']):
+            matched_feasibility_cat = cat_name
+            break
+
+    if matched_feasibility_cat:
+        matched_cat = matched_feasibility_cat.capitalize()
+        b_eval = next((b for b in budget_evals if b['category'].lower() == matched_feasibility_cat), None)
         
-        return f"""### 🏷️ Spending Breakdown for {username}
+        if not b_eval or b_eval["limit"] == 0:
+            cur_spend = cat_summary.get(matched_cat, 0.0)
+            rec_val = b_eval["recommended_next_month"] if b_eval else 5000.0
+            return f"""### 🎯 {matched_cat} Budget Feasibility for {username}
 
-**Highest Spending Category:** **{top_cat}** at **{curr} {top_cat_amt:,.2f}** ({cat_pcts.get(top_cat, 0)}% of your total spend).{dom_text}
+You currently **do not have a budget set** for `{matched_cat}`.
 
-**All Active Categories This Month:**
-{breakdown_lines}
+- **Current Month Spend:** {curr} {cur_spend:,.2f}
+- **Recommended Starting Budget:** **{curr} {rec_val:,.2f} / month** (based on your spending history).
 
-**Recommendation:**
-Since `{top_cat}` represents the largest portion of your monthly outflow, setting a strict budget cap here will produce the highest financial impact."""
+💡 Go to the **Budgets** section to set this target and start tracking!"""
 
-    # 3. "Am I staying within my budget?" / Budget Query
-    elif any(w in msg for w in ['budget', 'staying within', 'limit', 'cap', 'overbudget']):
+        return f"""### 🎯 {matched_cat} Budget Feasibility for {username}
+
+- **Current Budget Limit:** {curr} {b_eval['limit']:,.2f}
+- **Current Month Spend:** {curr} {b_eval['spent']:,.2f} ({b_eval['usage_pct']}% used)
+- **Historical Monthly Average:** {curr} {b_eval['avg_spend']:,.2f}
+- **Recommended Target:** **{curr} {b_eval['recommended_next_month']:,.2f}**
+
+**Advisor Assessment:**
+{b_eval['feasibility_msg']}"""
+
+    # 5. "Am I staying within my budget?" / "What budget needs my attention?" / General Budget Query
+    if any(w in msg for w in ['budget', 'staying within', 'limit', 'cap', 'overbudget', 'attention']):
         if not budgets:
             return f"""### 🎯 Budget Status for {username}
 
@@ -640,7 +779,41 @@ You have not configured any category budgets yet!
 **Category Performance:**
 {chr(10).join(b_lines)}{overrun_text}"""
 
-    # 4. "Why are my expenses increasing?" / "What changed this month?" / Trends Query
+    # 6. "How am I doing financially?" / General Overview / "What should I improve?"
+    elif any(w in msg for w in ['how am i doing', 'financially', 'health score', 'status', 'overview', 'summary', 'improve', 'what should i improve', 'what can i improve', 'spending too much']):
+        return f"""### 📊 Financial Health Assessment for {username}
+
+**Overall Score:** **{health_score}/100** ({health_grade})
+
+**Key Monthly Metrics:**
+- **Total Spent This Month:** {curr} {total:,.2f}
+- **Primary Spending Driver:** **{top_cat}** ({curr} {top_cat_amt:,.2f} or {cat_pcts.get(top_cat, 0)}% of total)
+- **Recurring Commitments:** {curr} {total_subs:,.2f} / month
+
+### 💡 Smart Spending Insights:
+{insights_block}
+
+**Action Plan:**
+1. **Address Top Overruns:** Focus immediately on any category exceeding its set limit.
+2. **Review Recurring Subscriptions:** Ensure all {curr} {total_subs:,.2f}/mo active memberships are bringing active value."""
+
+    # 7. "Where am I spending the most?" / Category Breakdown
+    elif any(w in msg for w in ['spend most', 'spending most', 'where am i spending', 'biggest expense', 'category', 'categories']):
+        breakdown_lines = "\n".join([f"- **{cat}:** {curr} {amt:,.2f} ({cat_pcts.get(cat, 0)}%)" for cat, amt in cat_summary.items()]) or "- No expenses recorded this month."
+        dominant_insight = next((ins for ins in insights if ins["type"] == "dominant_category"), None)
+        dom_text = f"\n\n💡 **Pattern Detected:** {dominant_insight['fact']}" if dominant_insight else ""
+        
+        return f"""### 🏷️ Spending Breakdown for {username}
+
+**Highest Spending Category:** **{top_cat}** at **{curr} {top_cat_amt:,.2f}** ({cat_pcts.get(top_cat, 0)}% of your total spend).{dom_text}
+
+**All Active Categories This Month:**
+{breakdown_lines}
+
+**Recommendation:**
+Since `{top_cat}` represents the largest portion of your monthly outflow, setting a strict budget cap here will produce the highest financial impact."""
+
+    # 8. "Why are my expenses increasing?" / "What changed this month?" / Trends Query
     elif any(w in msg for w in ['increasing', 'increase', 'trend', 'last month', 'more than last month', 'why are my expenses', 'what changed']):
         trend_insights = [ins for ins in insights if ins["type"] in ["mom_increase", "mom_decrease", "category_spike", "category_cutback", "outlier_expense"]]
         trend_text = "\n".join([f"- **{ins['fact']}**\n  💡 *Recommendation:* {ins['recommendation']}" for ins in trend_insights]) if trend_insights else "- There is not enough previous-month history to detect deep trend patterns yet."
@@ -654,7 +827,7 @@ You have not configured any category budgets yet!
 - **Previous Month:** {curr} {financial_data.get('total_prev_month', 0.0):,.2f}
 - **Net Difference:** {curr} {abs(mom_change):,.2f} ({mom_pct:+.1f}%)"""
 
-    # 5. Specific Category Query (e.g. "How much did I spend on shopping?")
+    # 9. Specific Category Query (e.g. "How much did I spend on shopping?")
     for cat_name in ['shopping', 'food', 'transport', 'rent', 'entertainment', 'healthcare', 'education']:
         if cat_name in msg:
             matched_cat = cat_name.capitalize()
@@ -671,17 +844,18 @@ You have not configured any category budgets yet!
 - **Total Spent on {matched_cat} This Month:** **{curr} {amt:,.2f}**
 - **Share of Monthly Total:** **{pct}%**{b_info}{cat_ins_text}"""
 
-    # 6. Default Helpful Advisor Welcome / Guidance
+    # 10. Default Helpful Advisor Welcome / Guidance
     return f"""### 🤖 ExpenseAI Advisor for {username}
 
-I have analyzed your real-time database records and detected key insights:
+I have analyzed your real-time database records and detected key budget insights:
 {insights_block}
 
 **You can ask me questions like:**
-- *"How am I doing financially?"*
-- *"Where am I spending the most?"*
-- *"Why are my expenses increasing?"*
 - *"Am I staying within my budget?"*
-- *"What can I improve this month?"*
+- *"Which category is over budget?"*
+- *"Where should I reduce spending?"*
+- *"Is my food budget reasonable?"*
+- *"How should I set my budget next month?"*
+- *"What budget needs my attention?"*
 
-How can I help you optimize your finances today?"""
+How can I help you optimize your budgets and finances today?"""
