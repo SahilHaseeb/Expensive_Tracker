@@ -357,9 +357,12 @@ def calculate_why_explanations(
         mom_pct = round((mom_diff / total_prev_month * 100), 1)
         hs_reasons.append(f"Spending increased by +{mom_pct}% (+{currency} {mom_diff:,.2f}) vs last month, adding downward pressure.")
 
+    prev_score = health_score_data.get("prev_score")
+
     health_score_why = {
         "score": score,
         "grade": grade,
+        "prev_score": prev_score,
         "essential_pct": essential_pct,
         "discretionary_pct": discretionary_pct,
         "overbudget_items": overbudget_items,
@@ -859,8 +862,14 @@ def get_smart_fallback_response(user_message, financial_data, username):
         why_bullets = "\n".join([f"- {r}" for r in reasons_list]) or "- Spending is balanced and within normal thresholds."
         
         change_note = ""
-        if any(kw in msg for kw in ['change', 'go down', 'drop', 'worse', 'decrease']):
-            change_note = "\n*(Note: Past scores are not stored historically in your account, but the factors below detail what is currently lowering your score).*\n"
+        if any(kw in msg for kw in ['change', 'go down', 'drop', 'worse', 'decrease', 'increase', 'higher', 'lower']):
+            prev_score_val = hs_why.get('prev_score') or financial_data.get('prev_health_score')
+            if prev_score_val is not None:
+                score_diff = score_val - prev_score_val
+                direction = "decreased" if score_diff < 0 else "increased"
+                change_note = f"\n*(Your score {direction} from {prev_score_val}/100 to {score_val}/100 based on the factors below).*\n"
+            else:
+                change_note = "\n*(Note: Past scores are not stored historically in your account, but the factors below detail what is currently affecting your score).*\n"
 
         return f"""### 📊 Financial Health Score Explanation for {username}
 
