@@ -94,7 +94,7 @@
     <!-- Product Deal Cards Grid -->
     <div class="deals-grid" id="dealsGrid">
         {% for item in results.products %}
-        <div class="deal-card glass card-hover deal-item-card {% if loop.index > 24 %}hidden-deal-card{% endif %} {% if item.is_best_price %}best-price-card{% elif item.is_premium %}premium-card{% elif item.is_top_rated %}top-rated-card{% endif %}"
+        <div class="deal-card glass card-hover deal-item-card {% if loop.index > 24 %}hidden-deal-card{% endif %} {% if item.is_best_deal %}best-deal-card{% elif item.is_best_price %}best-price-card{% elif item.is_premium %}premium-card{% elif item.is_top_rated %}top-rated-card{% endif %}"
              data-store="{{ item.source }}"
              data-index="{{ loop.index }}">
             <!-- Badges -->
@@ -103,7 +103,11 @@
                     <i class="fas fa-store"></i> {{ item.source }}
                 </span>
                 
-                {% if item.badge %}
+                {% if item.is_best_deal %}
+                <span class="best-deal-badge best-deal-primary animate-pulse-glow" title="Verified Best Deal">
+                    <i class="fas fa-crown"></i> BEST DEAL
+                </span>
+                {% elif item.badge %}
                 <span class="best-deal-badge {% if 'Lowest' in item.badge or 'Best' in item.badge %}bg-success{% elif 'Top' in item.badge or 'Rated' in item.badge %}bg-warning{% else %}bg-primary{% endif %} animate-pulse-glow">
                     {{ item.badge }}
                 </span>
@@ -145,6 +149,13 @@
                     </div>
                     <span class="shipping-info"><i class="fas fa-truck-fast"></i> {{ item.delivery }}</span>
                 </div>
+
+                {% if item.savings_str %}
+                <div class="savings-display{% if item.is_best_deal %} savings-best-deal{% endif %}">
+                    <i class="fas fa-piggy-bank"></i>
+                    <span>{{ item.savings_str }}</span>
+                </div>
+                {% endif %}
 
                 <!-- Direct Official Store External Link -->
                 <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer" class="btn-deal" title="Open product directly on {{ item.source }}">

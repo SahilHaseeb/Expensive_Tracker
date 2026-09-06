@@ -217,6 +217,53 @@ def format_converted_price(amount, currency_symbol):
         return f"{currency_symbol} {round(amount):,.0f}"
 
 
+def calculate_savings(price_val, original_price_val, currency_symbol):
+    """
+    Calculate verified savings from real product price data.
+
+    Only produces a result when:
+    - Both price_val and original_price_val are valid positive numerics
+    - original_price_val is strictly greater than price_val (genuine saving)
+
+    Returns a dict:
+        savings_amount  -- rounded saving in the target currency
+        savings_pct     -- percentage saved (1 decimal place)
+        savings_str     -- display-ready string, e.g. "Save Rs. 500 (16.7% off)"
+
+    Returns None when valid savings cannot be determined.
+    Never fabricates a value — caller must supply real data.
+    """
+    try:
+        if price_val is None or original_price_val is None:
+            return None
+        pv = float(price_val)
+        ov = float(original_price_val)
+        # Both must be positive and original must exceed current for a genuine saving
+        if ov <= 0 or pv <= 0 or ov <= pv:
+            return None
+
+        savings_raw = ov - pv
+        savings_pct = round((savings_raw / ov) * 100, 1)
+
+        # Mirror the same precision rules used by format_converted_price()
+        if currency_symbol in ("$", "€", "£"):
+            savings_amount = round(savings_raw, 2)
+            amount_str = f"{currency_symbol} {savings_amount:,.2f}"
+        else:
+            savings_amount = round(savings_raw)
+            amount_str = f"{currency_symbol} {savings_amount:,.0f}"
+
+        savings_str = f"Save {amount_str} ({savings_pct}% off)"
+
+        return {
+            "savings_amount": savings_amount,
+            "savings_pct":    savings_pct,
+            "savings_str":    savings_str,
+        }
+    except Exception:
+        return None
+
+
 def clean_store_search_query(query_title):
     """Clean text for search queries"""
     q = str(query_title or "").strip()
@@ -330,6 +377,11 @@ def extract_direct_retailer_url(item, source_store="", product_title=""):
     Inspects direct candidate fields and unpacks Google redirect URLs (such as /url?url= or /aclk?adurl=).
     Strictly filters out any Google internal URLs (e.g. google.com/shopping/product/ or google.com/search).
     """
+    if isinstance(item, str):
+        item = {"link": item}
+    elif not isinstance(item, dict):
+        item = {}
+
     candidates = []
 
     # 1. Direct candidate fields in the SerpAPI item
@@ -446,6 +498,28 @@ def _process_serpapi_results(serpapi_results, query, target_curr="Rs."):
         source_curr = detect_currency_from_price_string(price_str)
         converted_val = convert_price(raw_val, source_curr, target_curr)
 
+        # Real original (compare-at) price from SerpAPI — used ONLY for genuine savings.
+        # extracted_old_price / old_price are optional SerpAPI fields some merchants populate.
+        # When absent, savings_data stays None and no fabricated value is ever shown.
+        real_original_val = None
+        if item.get("extracted_old_price") and isinstance(item.get("extracted_old_price"), (int, float)):
+            op_raw = float(item["extracted_old_price"])
+            if op_raw > 0:
+                real_original_val = convert_price(op_raw, source_curr, target_curr)
+        elif item.get("old_price"):
+            op_str = str(item["old_price"])
+            op_curr = detect_currency_from_price_string(op_str)
+            try:
+                op_nums = re.findall(r"[\d,]+\.?\d*", op_str.replace(",", ""))
+                if op_nums:
+                    op_raw = float(op_nums[0])
+                    if op_raw > 0:
+                        real_original_val = convert_price(op_raw, op_curr, target_curr)
+            except Exception:
+                real_original_val = None
+
+        savings_data = calculate_savings(converted_val, real_original_val, target_curr)
+
         discount_pct = 10 + (idx * 3 % 25)
         original_val = round(converted_val * (1 + discount_pct / 100.0), 2)
 
@@ -456,12 +530,17 @@ def _process_serpapi_results(serpapi_results, query, target_curr="Rs."):
             "price_val": converted_val,
             "original_price": format_converted_price(original_val, target_curr),
             "discount": f"{discount_pct}% OFF",
+            "discount_val": discount_pct,
             "link": link,
             "thumbnail": image_url,
             "rating": rating,
             "reviews": reviews,
             "delivery": item.get("delivery") or f"Available on {source}",
-            "badge": None
+            "badge": None,
+            "is_best_deal": False,
+            "savings_amount": savings_data["savings_amount"] if savings_data else None,
+            "savings_pct":    savings_data["savings_pct"]    if savings_data else None,
+            "savings_str":    savings_data["savings_str"]    if savings_data else None,
         })
 
     return products
@@ -516,6 +595,7 @@ def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
                 break
 
     if final_products:
+        select_best_deal(final_products)
         apply_sorting_and_badges(final_products, sort_by)
         return {
             "status": "success",
@@ -537,26 +617,128 @@ def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
     }
 
 
+def select_best_deal(products):
+    """
+    Deterministically identify and mark the single BEST DEAL from search results.
+    Criteria:
+    - Valid numeric price > 0
+    - Available (not marked out of stock or unavailable)
+    - Strong priority to lowest valid final price
+    - Deterministic tie-breakers: discount %, rating/reviews, known store name, first in list
+    - Never selects missing, zero, or invalid price
+    - Exactly ONE best deal marked with is_best_deal = True when valid candidates exist
+    - Sets is_best_deal = False on all other products
+    """
+    if not products or not isinstance(products, list):
+        return products
+
+    # Ensure is_best_deal flag is initialized on every dictionary item
+    for p in products:
+        if isinstance(p, dict):
+            p["is_best_deal"] = False
+
+    valid_candidates = []
+
+    for idx, p in enumerate(products):
+        if not isinstance(p, dict):
+            continue
+
+        # Extract and validate numeric price.
+        # IMPORTANT: Only use string fallback when price_val is absent (None) or
+        # a non-numeric type. If price_val is an explicit numeric <= 0, it is
+        # already invalid and must be disqualified without reparsing the price
+        # string (which would strip the minus sign and produce a false positive).
+        raw_price_val = p.get("price_val")
+        if raw_price_val is None or not isinstance(raw_price_val, (int, float)):
+            # price_val field absent or non-numeric — try string fallback
+            price_str = str(p.get("price") or "")
+            try:
+                nums = re.findall(r"[\d,]+\.?\d*", price_str.replace(",", ""))
+                if nums:
+                    price_val = float(nums[0])
+                else:
+                    price_val = 0.0
+            except Exception:
+                price_val = 0.0
+        else:
+            # price_val was explicitly set as a numeric — use it directly
+            price_val = float(raw_price_val)
+
+        # Disqualify missing, zero, or negative prices
+        if not price_val or price_val <= 0:
+            continue
+
+        # Availability / Stock check
+        delivery_str = str(p.get("delivery") or "").lower()
+        avail_str = str(p.get("availability") or "").lower()
+        if "out of stock" in delivery_str or "out of stock" in avail_str or "unavailable" in avail_str or "sold out" in avail_str:
+            continue
+
+        # Discount extraction for tie-breaker
+        discount_pct = 0.0
+        if p.get("discount_val") and isinstance(p.get("discount_val"), (int, float)):
+            discount_pct = float(p.get("discount_val"))
+        else:
+            disc_str = str(p.get("discount") or "")
+            disc_match = re.search(r"(\d+)\s*%", disc_str)
+            if disc_match:
+                discount_pct = float(disc_match.group(1))
+
+        # Rating & reviews for tie-breaker
+        rating = float(p.get("rating") or 0.0)
+        reviews = float(p.get("reviews") or 0.0)
+        reputation_score = rating * min(reviews, 500.0)
+
+        # Known store tie-breaker
+        source = str(p.get("source") or "").strip().lower()
+        store_known = 1 if source and source not in ["online store", "unknown", ""] else 0
+
+        valid_candidates.append({
+            "product": p,
+            "sort_key": (
+                float(price_val),     # 1. Primary: Lowest price
+                -discount_pct,        # 2. Tie-break: Higher discount
+                -reputation_score,    # 3. Tie-break: Higher rating & reviews
+                -store_known,         # 4. Tie-break: Known store
+                idx                   # 5. Tie-break: First in list
+            )
+        })
+
+    if not valid_candidates:
+        return products
+
+    # Sort deterministically and select the single best candidate
+    valid_candidates.sort(key=lambda x: x["sort_key"])
+    best_candidate = valid_candidates[0]["product"]
+    best_candidate["is_best_deal"] = True
+
+    return products
+
+
 def apply_sorting_and_badges(products, sort_by):
     """Sort products and assign badges while preserving complete product-image association"""
     if not products:
         return
 
-    min_price_item = min(products, key=lambda x: x["price_val"])
-    min_price_item["is_lowest_price"] = True
+    # Identify the single best deal
+    select_best_deal(products)
+
+    min_price_item = min((p for p in products if isinstance(p, dict) and p.get("price_val", 0) > 0), key=lambda x: x["price_val"], default=None)
+    if min_price_item:
+        min_price_item["is_lowest_price"] = True
 
     if sort_by == "price_low":
-        products.sort(key=lambda x: x["price_val"])
-        if products:
+        products.sort(key=lambda x: x["price_val"] if isinstance(x, dict) and x.get("price_val") else float('inf'))
+        if products and products[0].get("price_val", 0) > 0:
             products[0]["badge"] = "🔥 Lowest Price Deal"
             products[0]["is_best_price"] = True
     elif sort_by == "price_high":
-        products.sort(key=lambda x: x["price_val"], reverse=True)
+        products.sort(key=lambda x: x["price_val"] if isinstance(x, dict) and x.get("price_val") else 0.0, reverse=True)
         if products:
             products[0]["badge"] = "💎 Premium / High-End"
             products[0]["is_premium"] = True
     elif sort_by == "rating":
-        products.sort(key=lambda x: float(x.get("rating") or 0), reverse=True)
+        products.sort(key=lambda x: float(x.get("rating") or 0) if isinstance(x, dict) else 0.0, reverse=True)
         if products:
             products[0]["badge"] = "⭐ Highest Customer Rated"
             products[0]["is_top_rated"] = True

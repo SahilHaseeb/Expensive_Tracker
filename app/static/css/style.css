@@ -1480,6 +1480,11 @@ tbody tr:hover td {
     border: 1.5px solid var(--success) !important;
 }
 
+.best-deal-card {
+    border: 2px solid #10B981 !important;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.25) !important;
+}
+
 .deal-badges-container {
     display: flex;
     justify-content: space-between;
@@ -1509,6 +1514,19 @@ tbody tr:hover td {
     display: inline-flex;
     align-items: center;
     gap: 5px;
+}
+
+.best-deal-badge.best-deal-primary {
+    background: linear-gradient(135deg, #10B981, #059669) !important;
+    color: #FFFFFF !important;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 10px rgba(16, 185, 129, 0.4);
+}
+
+.best-deal-badge.best-deal-primary i {
+    color: #FDE047;
+    margin-right: 2px;
 }
 
 .discount-badge {
@@ -1659,6 +1677,38 @@ tbody tr:hover td {
 .bg-warning { background: linear-gradient(135deg, #F59E0B, #D97706) !important; color: white !important; }
 .bg-primary { background: linear-gradient(135deg, #6366F1, #8B5CF6) !important; color: white !important; }
 
+
+/* ─── SAVINGS DISPLAY ──────────────────────────────────────────────────────── */
+.savings-display {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: rgba(16, 185, 129, 0.12);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: var(--radius-full);
+    font-size: 12.5px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    width: fit-content;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.savings-display i {
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+/* Extra emphasis on the Best Deal card */
+.savings-display.savings-best-deal {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.45);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.18);
+}
 
 .no-deals-card {
     grid-column: 1 / -1;
