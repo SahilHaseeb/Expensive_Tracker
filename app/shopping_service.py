@@ -264,6 +264,201 @@ def calculate_savings(price_val, original_price_val, currency_symbol):
         return None
 
 
+def _safe_extract_numeric(val):
+    """Safely extract float from numeric or string value. Returns None if invalid or negative."""
+    if val is None:
+        return None
+    if isinstance(val, (int, float)):
+        f = float(val)
+        return f if f >= 0 else None
+    s = str(val).strip()
+    if not s:
+        return None
+    if "free" in s.lower():
+        return 0.0
+    if any(w in s.lower() for w in ("calculated at checkout", "unknown", "tbd", "contact", "varies")):
+        return None
+    try:
+        nums = re.findall(r"[\d,]+\.?\d*", s.replace(",", ""))
+        if nums:
+            if "-" + nums[0] in s:
+                return None
+            f = float(nums[0])
+            return f if f >= 0 else None
+    except Exception:
+        pass
+    return None
+
+
+def calculate_true_total_price(product=None, product_price=None, shipping=None, tax=None, source_total=None, currency=None):
+    """
+    Calculate verified True Total Price / Estimated Total for an offer (Feature #11).
+
+    Priority:
+    1. Explicit source final total (source_total) if present and > 0 -> status: 'exact'
+    2. Product price + verified shipping and/or tax -> status: 'calculated'
+    3. Product price only (when shipping/tax are unknown/unsupplied) -> status: 'price_only'
+    4. Invalid or missing product price -> status: 'unavailable'
+
+    Shipping rules:
+    - Explicit 'free' / 'free shipping' / 0 -> shipping_cost = 0.0
+    - Explicit numeric > 0 -> shipping_cost = numeric
+    - Unknown / missing / unparseable -> shipping_cost = None (NEVER assumed 0)
+
+    Tax rules:
+    - Explicit numeric >= 0 -> tax_amount = numeric
+    - Unknown / missing / unparseable -> tax_amount = None (NEVER assumed 0, no guessed tax rates)
+
+    Returns dict:
+        total_price              -- float / int or None
+        total_price_str          -- display string e.g. 'Rs. 4,250' or None
+        total_price_status       -- 'exact' | 'calculated' | 'price_only' | 'unavailable'
+        total_price_is_estimated  -- bool
+        shipping_cost            -- float or None (0.0 for free)
+        shipping_str             -- display string e.g. 'Free Shipping', 'Rs. 250' or None
+        tax_amount               -- float or None
+        tax_str                  -- display string or None
+        currency                 -- currency string symbol
+    """
+    try:
+        # If product dict passed, extract fields from it if not explicitly provided as args
+        if isinstance(product, dict):
+            if product_price is None:
+                product_price = product.get("price_val")
+                if product_price is None:
+                    product_price = product.get("product_price")
+                if product_price is None:
+                    product_price = product.get("price")
+            if shipping is None:
+                shipping = product.get("shipping_cost")
+                if shipping is None:
+                    shipping = product.get("shipping")
+                if shipping is None:
+                    shipping = product.get("delivery")
+            if tax is None:
+                tax = product.get("tax_amount")
+                if tax is None:
+                    tax = product.get("tax")
+            if source_total is None:
+                source_total = product.get("source_total")
+                if source_total is None:
+                    source_total = product.get("extracted_total_price")
+            if currency is None:
+                currency = product.get("currency")
+                if not currency and product.get("price"):
+                    currency = detect_currency_from_price_string(str(product["price"]))
+
+        # Normalize currency symbol
+        curr_raw = str(currency or "Rs.").strip()
+        if curr_raw in ("$", "USD"):
+            curr = "$"
+        elif curr_raw in ("€", "EUR"):
+            curr = "€"
+        elif curr_raw in ("£", "GBP"):
+            curr = "£"
+        elif curr_raw in ("₹", "INR"):
+            curr = "₹"
+        elif curr_raw in ("Rs.", "PKR", "Rs"):
+            curr = "Rs."
+        else:
+            curr = curr_raw
+
+        # 1. Check for explicit source final total
+        st_val = _safe_extract_numeric(source_total)
+        if st_val is not None and st_val > 0:
+            s_parsed = _safe_extract_numeric(shipping)
+            t_parsed = _safe_extract_numeric(tax)
+            return {
+                "total_price": st_val,
+                "total_price_str": format_converted_price(st_val, curr),
+                "total_price_status": "exact",
+                "total_price_is_estimated": False,
+                "shipping_cost": s_parsed,
+                "shipping_str": "Free Shipping" if s_parsed == 0.0 else (format_converted_price(s_parsed, curr) if s_parsed is not None else None),
+                "tax_amount": t_parsed,
+                "tax_str": format_converted_price(t_parsed, curr) if t_parsed is not None else None,
+                "currency": curr,
+            }
+
+        # 2. Check product price
+        pv = _safe_extract_numeric(product_price)
+        if pv is None or pv <= 0:
+            return {
+                "total_price": None,
+                "total_price_str": None,
+                "total_price_status": "unavailable",
+                "total_price_is_estimated": False,
+                "shipping_cost": None,
+                "shipping_str": None,
+                "tax_amount": None,
+                "tax_str": None,
+                "currency": curr,
+            }
+
+        # 3. Parse shipping
+        s_val = None
+        s_str = None
+        if shipping is not None:
+            parsed_s = _safe_extract_numeric(shipping)
+            if parsed_s is not None:
+                s_val = parsed_s
+                if s_val == 0.0:
+                    s_str = "Free Shipping"
+                else:
+                    s_str = format_converted_price(s_val, curr)
+
+        # 4. Parse tax
+        t_val = None
+        t_str = None
+        if tax is not None:
+            parsed_t = _safe_extract_numeric(tax)
+            if parsed_t is not None:
+                t_val = parsed_t
+                t_str = format_converted_price(t_val, curr)
+
+        # 5. Determine total price and status
+        if s_val is not None or t_val is not None:
+            extra = (s_val if s_val is not None else 0.0) + (t_val if t_val is not None else 0.0)
+            tot = round(pv + extra, 2) if curr in ("$", "€", "£") else round(pv + extra)
+            return {
+                "total_price": tot,
+                "total_price_str": format_converted_price(tot, curr),
+                "total_price_status": "calculated",
+                "total_price_is_estimated": True,
+                "shipping_cost": s_val,
+                "shipping_str": s_str,
+                "tax_amount": t_val,
+                "tax_str": t_str,
+                "currency": curr,
+            }
+        else:
+            # Only product price is known; shipping/tax not supplied
+            tot = round(pv, 2) if curr in ("$", "€", "£") else round(pv)
+            return {
+                "total_price": tot,
+                "total_price_str": format_converted_price(tot, curr),
+                "total_price_status": "price_only",
+                "total_price_is_estimated": True,
+                "shipping_cost": None,
+                "shipping_str": None,
+                "tax_amount": None,
+                "tax_str": None,
+                "currency": curr,
+            }
+    except Exception:
+        return {
+            "total_price": None,
+            "total_price_str": None,
+            "total_price_status": "unavailable",
+            "total_price_is_estimated": False,
+            "shipping_cost": None,
+            "shipping_str": None,
+            "tax_amount": None,
+            "tax_str": None,
+            "currency": "Rs.",
+        }
+
+
 def clean_store_search_query(query_title):
     """Clean text for search queries"""
     q = str(query_title or "").strip()
@@ -523,6 +718,59 @@ def _process_serpapi_results(serpapi_results, query, target_curr="Rs."):
         discount_pct = 10 + (idx * 3 % 25)
         original_val = round(converted_val * (1 + discount_pct / 100.0), 2)
 
+        # ── True Total Price Extraction (Feature #11) ──────────────────────
+        # 1. Source total price if explicitly provided by SerpAPI
+        raw_source_total = item.get("extracted_total_price") or item.get("total_price")
+        source_total_val = None
+        if raw_source_total is not None:
+            st_num = _safe_extract_numeric(raw_source_total)
+            if st_num is not None and st_num > 0:
+                source_total_val = convert_price(st_num, source_curr, target_curr)
+
+        # 2. Shipping cost if explicitly provided
+        shipping_val = None
+        if item.get("extracted_shipping") is not None:
+            try:
+                es = float(item["extracted_shipping"])
+                if es >= 0:
+                    shipping_val = convert_price(es, source_curr, target_curr) if es > 0 else 0.0
+            except (ValueError, TypeError):
+                shipping_val = None
+        elif item.get("shipping"):
+            s_str = str(item["shipping"]).lower()
+            if "free" in s_str:
+                shipping_val = 0.0
+            else:
+                s_num = _safe_extract_numeric(item["shipping"])
+                if s_num is not None and s_num > 0:
+                    shipping_val = convert_price(s_num, source_curr, target_curr)
+        elif item.get("delivery"):
+            d_str = str(item["delivery"]).lower()
+            if any(f in d_str for f in ("free delivery", "free shipping", "free standard delivery")):
+                shipping_val = 0.0
+
+        # 3. Tax if explicitly provided
+        tax_val = None
+        if item.get("extracted_tax") is not None:
+            try:
+                et = float(item["extracted_tax"])
+                if et > 0:
+                    tax_val = convert_price(et, source_curr, target_curr)
+            except (ValueError, TypeError):
+                tax_val = None
+        elif item.get("tax"):
+            t_num = _safe_extract_numeric(item["tax"])
+            if t_num is not None and t_num > 0:
+                tax_val = convert_price(t_num, source_curr, target_curr)
+
+        total_data = calculate_true_total_price(
+            product_price=converted_val,
+            shipping=shipping_val,
+            tax=tax_val,
+            source_total=source_total_val,
+            currency=target_curr
+        )
+
         products.append({
             "title": title,
             "source": source,
@@ -542,6 +790,14 @@ def _process_serpapi_results(serpapi_results, query, target_curr="Rs."):
             "savings_pct":    savings_data["savings_pct"]    if savings_data else None,
             "savings_str":    savings_data["savings_str"]    if savings_data else None,
             "deal_score":     None,
+            "total_price":    total_data["total_price"],
+            "total_price_str": total_data["total_price_str"],
+            "total_price_status": total_data["total_price_status"],
+            "total_price_is_estimated": total_data["total_price_is_estimated"],
+            "shipping_cost":  total_data["shipping_cost"],
+            "shipping_str":   total_data["shipping_str"],
+            "tax_amount":     total_data["tax_amount"],
+            "tax_str":        total_data["tax_str"],
         })
 
     return products

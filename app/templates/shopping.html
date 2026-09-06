@@ -257,6 +257,35 @@
                     <span class="shipping-info"><i class="fas fa-truck-fast"></i> {{ item.delivery }}</span>
                 </div>
 
+                <!-- True Total Price / Estimated Total (Feature #11) -->
+                {% if item.total_price_str %}
+                <div class="true-total-price-section" style="margin: 6px 0 8px; padding: 6px 10px; background: rgba(255, 255, 255, 0.04); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); font-size: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #94a3b8; font-weight: 600; display: flex; align-items: center; gap: 5px;">
+                            {% if item.total_price_status == 'exact' %}
+                            <i class="fas fa-receipt" style="color: #34d399; font-size: 11px;"></i> Final Total:
+                            {% elif item.total_price_status == 'calculated' %}
+                            <i class="fas fa-calculator" style="color: #818cf8; font-size: 11px;"></i> Estimated Total:
+                            {% else %}
+                            <i class="fas fa-tag" style="color: #94a3b8; font-size: 11px;"></i> Known Total:
+                            {% endif %}
+                        </span>
+                        <strong style="color: {% if item.total_price_status == 'exact' %}#34d399{% else %}#ffffff{% endif %}; font-size: 13px;">
+                            {{ item.total_price_str }}
+                        </strong>
+                    </div>
+                    <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">
+                        {% if item.total_price_status == 'exact' %}
+                        Verified checkout total from merchant
+                        {% elif item.total_price_status == 'calculated' %}
+                        Includes product{% if item.shipping_cost is not none and item.shipping_cost > 0 %} + {{ item.shipping_str }}{% elif item.shipping_cost == 0 %} + Free Shipping{% endif %}{% if item.tax_amount is not none and item.tax_amount > 0 %} + Tax ({{ item.tax_str }}){% endif %}
+                        {% else %}
+                        Product price only • Shipping/tax not supplied by merchant
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
                 {% if item.savings_str %}
                 <div class="savings-display{% if item.is_best_deal %} savings-best-deal{% endif %}">
                     <i class="fas fa-piggy-bank"></i>
