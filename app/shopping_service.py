@@ -546,7 +546,115 @@ def _process_serpapi_results(serpapi_results, query, target_curr="Rs."):
     return products
 
 
+def filter_products(products, min_price=None, max_price=None,
+                    stores=None, min_discount=None, min_savings=None,
+                    best_deal_only=False, in_stock_only=False):
+    """
+    Apply advanced filters to an already-returned product list.
+
+    Filter logic:
+    - All active categories use AND logic between them.
+    - Multiple stores within the `stores` set use OR logic.
+    - Missing / invalid data safely fails the relevant filter.
+    - is_best_deal and savings fields are never modified.
+
+    Args:
+        products      : list of product dicts from _process_serpapi_results()
+        min_price     : minimum price_val (inclusive); None = no lower bound
+        max_price     : maximum price_val (inclusive); None = no upper bound
+        stores        : set/list of store name strings (case-insensitive OR);
+                        None or empty = all stores pass
+        min_discount  : minimum discount percentage (uses savings_pct if
+                        available, else discount_val); None = disabled
+        min_savings   : minimum savings_amount (real #7 data only);
+                        None = disabled
+        best_deal_only: if True, only the product with is_best_deal=True passes
+        in_stock_only : if True, products whose delivery/availability
+                        explicitly contains "out of stock", "unavailable",
+                        or "sold out" are excluded
+
+    Returns a new list; never modifies the input list.
+    Never crashes on malformed / missing product data.
+    """
+    if not products:
+        return []
+
+    # Normalize store set once
+    store_filter = set()
+    if stores:
+        for s in stores:
+            ns = str(s).strip().lower()
+            if ns:
+                store_filter.add(ns)
+
+    filtered = []
+    for p in products:
+        if not isinstance(p, dict):
+            continue
+
+        # ── Store (OR logic) ──────────────────────────────────────────────────
+        if store_filter:
+            card_store = str(p.get("source") or "").lower()
+            if not any(card_store == s or s in card_store for s in store_filter):
+                continue
+
+        # ── Price range ───────────────────────────────────────────────────────
+        raw_pv = p.get("price_val")
+        if raw_pv is not None and isinstance(raw_pv, (int, float)) and raw_pv > 0:
+            pv = float(raw_pv)
+            if min_price is not None and pv < float(min_price):
+                continue
+            if max_price is not None and pv > float(max_price):
+                continue
+        else:
+            # Missing / invalid price — fail if any price filter is set
+            if min_price is not None or max_price is not None:
+                continue
+
+        # ── Discount filter ───────────────────────────────────────────────────
+        if min_discount is not None:
+            # Prefer real savings_pct (#7); fall back to fabricated discount_val
+            disc = p.get("savings_pct")
+            if disc is None:
+                disc = p.get("discount_val")
+            try:
+                disc = float(disc)
+            except (TypeError, ValueError):
+                continue   # no valid discount data → fail filter
+            if disc < float(min_discount):
+                continue
+
+        # ── Savings filter (real #7 data only) ───────────────────────────────
+        if min_savings is not None:
+            sav = p.get("savings_amount")
+            if sav is None:
+                continue   # no verified savings → fail filter
+            try:
+                sav = float(sav)
+            except (TypeError, ValueError):
+                continue
+            if sav < float(min_savings):
+                continue
+
+        # ── Best Deal Only ────────────────────────────────────────────────────
+        if best_deal_only and not p.get("is_best_deal"):
+            continue
+
+        # ── In Stock Only (conservative) ──────────────────────────────────────
+        if in_stock_only:
+            delivery_str = str(p.get("delivery") or "").lower()
+            avail_str    = str(p.get("availability") or "").lower()
+            if ("out of stock" in delivery_str or "out of stock" in avail_str
+                    or "unavailable" in avail_str or "sold out" in avail_str):
+                continue
+
+        filtered.append(p)
+
+    return filtered
+
+
 def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
+
     """
     Unified Live Shopping Search with Intelligent Query Normalization & Multi-Attempt Fallback.
     - Attempt 1: Search using the user's original query.

@@ -45,35 +45,114 @@
         </div>
     </div>
 
-    <!-- Clean Inline Multi-Store Filter Bar (NO Obstructive Dropdowns Covering Cards) -->
-    <div class="store-filter-bar glass" style="margin: 16px 0; padding: 14px 20px; border-radius: 14px; display: flex; flex-direction: column; gap: 12px;">
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 13px; font-weight: 700; color: #cbd5e1; display: flex; align-items: center; gap: 6px;">
-                    <i class="fas fa-store text-primary"></i> Filter Retail Stores:
-                </span>
-            </div>
+    <!-- ═══ ADVANCED FILTERS PANEL ════════════════════════════════════════════ -->
+    <div class="adv-filters-panel glass" id="advFiltersPanel">
 
-            <!-- Quick Inline Store Search Filter Input -->
-            <div class="inline-store-search-box">
-                <i class="fas fa-magnifying-glass"></i>
-                <input type="text" id="storeQuickSearch" placeholder="Filter store by name..." onkeyup="filterStorePills(this.value)" autocomplete="off">
-            </div>
-        </div>
-
-        <!-- Dynamic Store Pills Container (All Stores with Real Deal Counts) -->
-        <div class="dynamic-store-pills-row" id="dynamicStorePillsContainer">
-            <button class="store-filter-btn active-store-filter" id="allStoresBtn" onclick="filterByStore('ALL', this)">
-                🌐 All Stores ({{ results.products|length }})
+        <!-- Panel header row -->
+        <div class="adv-filters-header">
+            <span class="adv-filters-title">
+                <i class="fas fa-sliders text-primary"></i>
+                Advanced Filters
+                <span class="active-filters-badge" id="activeFiltersBadge" style="display:none;">0 active</span>
+            </span>
+            <button class="adv-filters-toggle" id="advFiltersToggle" onclick="toggleFiltersPanel()" title="Toggle filters">
+                <i class="fas fa-chevron-down" id="advFiltersChevron"></i>
             </button>
-            <!-- Remaining stores populated dynamically on page load -->
         </div>
-    </div>
+
+        <!-- Collapsible filters body -->
+        <div class="adv-filters-body" id="advFiltersBody">
+
+            <!-- Row 1: Price Range + Store Search -->
+            <div class="adv-filters-row">
+
+                <!-- Price Range -->
+                <div class="filter-group">
+                    <label class="filter-label"><i class="fas fa-tag"></i> Price Range</label>
+                    <div class="price-range-inputs">
+                        <input type="number" id="filterMinPrice" min="0" placeholder="Min price"
+                               class="filter-input" oninput="onFilterChange()">
+                        <span class="price-range-sep">–</span>
+                        <input type="number" id="filterMaxPrice" min="0" placeholder="Max price"
+                               class="filter-input" oninput="onFilterChange()">
+                    </div>
+                </div>
+
+                <!-- Discount / Savings -->
+                <div class="filter-group">
+                    <label class="filter-label"><i class="fas fa-percent"></i> Min Discount</label>
+                    <div class="price-range-inputs">
+                        <input type="number" id="filterMinDiscount" min="0" max="100" placeholder="e.g. 10"
+                               class="filter-input" oninput="onFilterChange()">
+                        <span class="price-range-sep">%</span>
+                    </div>
+                </div>
+
+                <!-- Min Savings -->
+                <div class="filter-group">
+                    <label class="filter-label"><i class="fas fa-piggy-bank"></i> Min Savings</label>
+                    <div class="price-range-inputs">
+                        <input type="number" id="filterMinSavings" min="0" placeholder="e.g. 5000"
+                               class="filter-input" oninput="onFilterChange()">
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Row 2: Toggles -->
+            <div class="adv-filters-row adv-filters-toggles-row">
+                <!-- Best Deal Only -->
+                <label class="filter-toggle-label" id="bestDealToggle">
+                    <input type="checkbox" id="filterBestDeal" onchange="onFilterChange()">
+                    <span class="filter-toggle-pill">
+                        <i class="fas fa-crown"></i> Best Deal Only
+                    </span>
+                </label>
+
+                <!-- In Stock Only -->
+                <label class="filter-toggle-label" id="inStockToggle">
+                    <input type="checkbox" id="filterInStock" onchange="onFilterChange()">
+                    <span class="filter-toggle-pill">
+                        <i class="fas fa-circle-check"></i> In Stock Only
+                    </span>
+                </label>
+
+                <!-- Reset button -->
+                <button class="filter-reset-btn" id="filterResetBtn" onclick="resetAllFilters()">
+                    <i class="fas fa-rotate-left"></i> Reset Filters
+                </button>
+            </div>
+
+            <!-- Row 3: Store filter (dynamic checkboxes + search) -->
+            <div class="filter-group filter-group-stores">
+                <div class="store-filter-search-row">
+                    <label class="filter-label"><i class="fas fa-store"></i> Stores</label>
+                    <div class="inline-store-search-box">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <input type="text" id="storeQuickSearch" placeholder="Search store…"
+                               oninput="filterStorePills(this.value)" autocomplete="off">
+                    </div>
+                </div>
+                <!-- Checkboxes + All button -->
+                <div class="store-checkboxes-row" id="storeCheckboxesRow">
+                    <label class="store-check-label selected-store" id="storeCheckAll">
+                        <input type="checkbox" id="cbStoreAll" checked onchange="onStoreAllChange(this)">
+                        <span>🌐 All Stores (<span id="allStoresCountSpan">{{ results.products|length }}</span>)</span>
+                    </label>
+                    <!-- Per-store checkboxes added dynamically by JS -->
+                </div>
+            </div>
+
+        </div><!-- /adv-filters-body -->
+    </div><!-- /adv-filters-panel -->
 
     <!-- Results Information Bar -->
     <div class="results-bar">
         <div class="results-count">
-            <i class="fas fa-layer-group"></i> Showing <strong id="visibleCountText">24</strong> of <strong id="totalCountText">{{ results.products|length }}</strong> live store offers for <span class="search-term">"{{ current_query }}"</span>
+            <i class="fas fa-layer-group"></i>
+            Showing <strong id="visibleCountText">{{ [results.products|length, 24] | min }}</strong>
+            of <strong id="totalCountText">{{ results.products|length }}</strong>
+            live store offers for <span class="search-term">"{{ current_query }}"</span>
             <span class="sort-tag-info">
                 (Sorted by: {% if current_sort == 'price_low' %}Lowest Price First{% elif current_sort == 'price_high' %}Highest Price First{% elif current_sort == 'rating' %}Highest Customer Rating{% endif %})
             </span>
@@ -96,6 +175,11 @@
         {% for item in results.products %}
         <div class="deal-card glass card-hover deal-item-card {% if loop.index > 24 %}hidden-deal-card{% endif %} {% if item.is_best_deal %}best-deal-card{% elif item.is_best_price %}best-price-card{% elif item.is_premium %}premium-card{% elif item.is_top_rated %}top-rated-card{% endif %}"
              data-store="{{ item.source }}"
+             data-price="{{ item.price_val | default(0, true) }}"
+             data-savings="{{ item.savings_amount if item.savings_amount is not none else '' }}"
+             data-discount="{{ item.savings_pct if item.savings_pct is not none else (item.discount_val | default('', true)) }}"
+             data-is-best-deal="{{ 'true' if item.is_best_deal else 'false' }}"
+             data-delivery="{{ item.delivery | lower }}"
              data-index="{{ loop.index }}">
             <!-- Badges -->
             <div class="deal-badges-container">
@@ -171,6 +255,13 @@
             <p style="color: #94a3b8; font-size: 14px;">Try searching for another product name or check your search spelling (e.g. perfume, laptop, shoes, smartphone, watch, headphones).</p>
         </div>
         {% endfor %}
+        <!-- Empty-filter state (shown by JS when filters remove all results) -->
+        <div class="no-deals-card glass" id="emptyFilterState" style="display:none; text-align:center; padding:50px 20px; grid-column:1/-1;">
+            <i class="fas fa-filter-circle-xmark" style="font-size:52px;color:#818cf8;margin-bottom:18px;display:block;"></i>
+            <h3 style="font-size:20px;margin-bottom:10px;color:#f8fafc;">No products match your selected filters.</h3>
+            <p style="color:#94a3b8;font-size:14px;">Try relaxing a filter or click <strong>Reset Filters</strong> to restore all results.</p>
+            <button onclick="resetAllFilters()" class="btn-primary" style="margin-top:16px;padding:10px 28px;font-size:14px;border-radius:50px;"><i class="fas fa-rotate-left"></i> Reset Filters</button>
+        </div>
     </div>
 
     <!-- Load More Deals Button Section -->
@@ -184,217 +275,490 @@
 </div>
 
 <style>
-/* ─── INLINE STORE SEARCH BOX ───────────────────────────────────────────── */
-.inline-store-search-box {
+/* ─── ADVANCED FILTERS PANEL ────────────────────────────────────────────── */
+.adv-filters-panel {
+    margin: 16px 0;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.adv-filters-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    cursor: pointer;
+}
+
+.adv-filters-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #cbd5e1;
     display: flex;
     align-items: center;
     gap: 8px;
-    background: rgba(255, 255, 255, 0.07);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 25px;
-    padding: 6px 14px;
+}
+
+.active-filters-badge {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 20px;
+}
+
+.adv-filters-toggle {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #94a3b8;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
     transition: all 0.2s ease;
-    min-width: 220px;
-}
-
-.inline-store-search-box:focus-within {
-    border-color: #6366f1;
-    background: rgba(255, 255, 255, 0.12);
-    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
-}
-
-.inline-store-search-box i {
-    color: #818cf8;
     font-size: 12px;
 }
+.adv-filters-toggle:hover { background: rgba(99,102,241,0.25); color: #fff; }
 
-.inline-store-search-box input {
-    background: transparent;
-    border: none;
-    outline: none;
-    color: #ffffff;
-    font-size: 12.5px;
-    font-weight: 500;
-    width: 100%;
+.adv-filters-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 0 20px 18px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+.adv-filters-body.collapsed { display: none; }
+
+.adv-filters-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
 }
 
-.inline-store-search-box input::placeholder {
+.adv-filters-toggles-row {
+    align-items: center;
+    gap: 12px;
+    padding-top: 4px;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 180px;
+    flex: 1;
+}
+
+.filter-label {
+    font-size: 11.5px;
+    font-weight: 700;
     color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
-/* ─── DYNAMIC STORE PILLS ROW ───────────────────────────────────────────── */
-.dynamic-store-pills-row {
+.price-range-inputs {
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
 }
 
-.store-filter-btn {
-    background: rgba(255, 255, 255, 0.08) !important;
-    color: #e2e8f0 !important;
-    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+.filter-input {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    color: #f1f5f9;
+    font-size: 13px;
+    padding: 7px 12px;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.2s ease;
+    -moz-appearance: textfield;
+}
+.filter-input::-webkit-outer-spin-button,
+.filter-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.filter-input:focus {
+    border-color: #6366f1;
+    background: rgba(99,102,241,0.1);
+    box-shadow: 0 0 0 2px rgba(99,102,241,0.2);
+}
+.filter-input::placeholder { color: #64748b; }
+
+.price-range-sep {
+    color: #475569;
+    font-size: 14px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+/* Toggle pills (Best Deal / In Stock) */
+.filter-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    cursor: pointer;
+    user-select: none;
+}
+.filter-toggle-label input[type="checkbox"] { display: none; }
+.filter-toggle-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
     padding: 7px 16px;
     border-radius: 20px;
     font-size: 12.5px;
     font-weight: 600;
+    color: #e2e8f0;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+.filter-toggle-label input:checked + .filter-toggle-pill {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(99,102,241,0.4);
+    font-weight: 700;
+}
+.filter-toggle-pill:hover {
+    background: rgba(99,102,241,0.25);
+    color: #fff;
+    border-color: #6366f1;
+}
+
+/* Reset button */
+.filter-reset-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 18px;
+    border-radius: 20px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #94a3b8;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
     cursor: pointer;
     transition: all 0.2s ease;
+    margin-left: auto;
+}
+.filter-reset-btn:hover {
+    background: rgba(239,68,68,0.15);
+    color: #f87171;
+    border-color: rgba(239,68,68,0.35);
+}
+
+/* Store checkboxes */
+.filter-group-stores { flex: 1 1 100%; }
+
+.store-filter-search-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.store-checkboxes-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.store-check-label {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #e2e8f0;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.14);
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease;
 }
-
-.store-filter-btn:hover {
-    background: rgba(99, 102, 241, 0.25) !important;
-    color: #ffffff !important;
-    border-color: #6366f1 !important;
-    transform: translateY(-1px);
-}
-
-.active-store-filter {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
-    color: #ffffff !important;
-    border-color: transparent !important;
-    font-weight: 700 !important;
-    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.45) !important;
-}
-
-.store-badge-count {
-    background: rgba(255, 255, 255, 0.18);
-    color: #ffffff;
-    padding: 1px 7px;
-    border-radius: 10px;
-    font-size: 11px;
+.store-check-label input[type="checkbox"] { display: none; }
+.store-check-label.selected-store {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    border-color: transparent;
     font-weight: 700;
-    margin-left: 4px;
+    box-shadow: 0 4px 12px rgba(99,102,241,0.35);
+}
+.store-check-label:hover:not(.selected-store) {
+    background: rgba(99,102,241,0.2);
+    border-color: #6366f1;
+    color: #fff;
 }
 
-.active-store-filter .store-badge-count {
-    background: rgba(255, 255, 255, 0.3);
+/* Inline store search inside filters panel */
+.inline-store-search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 25px;
+    padding: 6px 14px;
+    transition: all 0.2s ease;
+    min-width: 200px;
 }
+.inline-store-search-box:focus-within {
+    border-color: #6366f1;
+    background: rgba(255,255,255,0.12);
+    box-shadow: 0 0 0 2px rgba(99,102,241,0.25);
+}
+.inline-store-search-box i { color: #818cf8; font-size: 12px; }
+.inline-store-search-box input {
+    background: transparent; border: none; outline: none;
+    color: #fff; font-size: 12.5px; font-weight: 500; width: 100%;
+}
+.inline-store-search-box input::placeholder { color: #94a3b8; }
 
-.hidden-deal-card {
-    display: none !important;
-}
+.hidden-deal-card { display: none !important; }
 
 /* ─── CATEGORY QUICK PILLS ──────────────────────────────────────────────── */
 .category-pill {
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(255,255,255,0.06);
     color: #cbd5e1;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255,255,255,0.12);
     font-weight: 500;
 }
-.category-pill:hover {
-    background: rgba(99, 102, 241, 0.2);
-    color: #ffffff;
-    border-color: #6366f1;
-}
+.category-pill:hover { background: rgba(99,102,241,0.2); color: #fff; border-color: #6366f1; }
 .category-pill.active {
     background: linear-gradient(135deg, #6366f1, #3b82f6);
-    color: #ffffff;
-    font-weight: 700;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+    color: #fff; font-weight: 700;
+    box-shadow: 0 4px 12px rgba(99,102,241,0.35);
+}
+
+@media (max-width: 600px) {
+    .adv-filters-row { flex-direction: column; }
+    .filter-group { min-width: 100%; }
+    .filter-reset-btn { margin-left: 0; }
+    .store-filter-search-row { flex-direction: column; align-items: flex-start; }
 }
 </style>
 
 <script>
-let currentVisible = 24;
-const batchSize = 24;
-let activeStore = 'ALL';
-let allStoreButtons = [];
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADVANCED FILTERS ENGINE — Feature #8
+   All filtering is purely client-side; no SerpAPI requests are ever triggered
+   by filter interactions.
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-function getStoreEmoji(storeName) {
-    const s = storeName.toLowerCase();
-    if (s.includes('daraz')) return '📦';
-    if (s.includes('amazon')) return '🛒';
+const batchSize = 24;
+let currentVisible = 24;
+
+/* ---------- panel collapse state ---------- */
+function toggleFiltersPanel() {
+    const body = document.getElementById('advFiltersBody');
+    const chevron = document.getElementById('advFiltersChevron');
+    if (!body) return;
+    const collapsed = body.classList.toggle('collapsed');
+    if (chevron) {
+        chevron.className = collapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-down';
+    }
+}
+
+/* ---------- store emoji helper ---------- */
+function getStoreEmoji(s) {
+    s = s.toLowerCase();
+    if (s.includes('daraz'))    return '📦';
+    if (s.includes('amazon'))   return '🛒';
     if (s.includes('aliexpress')) return '✈️';
-    if (s.includes('walmart')) return '🏪';
-    if (s.includes('target')) return '🎯';
-    if (s.includes('ebay')) return '🏷️';
-    if (s.includes('sephora')) return '💄';
-    if (s.includes('ikea')) return '🛋️';
-    if (s.includes('staples')) return '📎';
+    if (s.includes('walmart'))  return '🏪';
+    if (s.includes('target'))   return '🎯';
+    if (s.includes('ebay'))     return '🏷️';
+    if (s.includes('sephora'))  return '💄';
+    if (s.includes('ikea'))     return '🛋️';
+    if (s.includes('staples'))  return '📎';
     if (s.includes('bestbuy') || s.includes('best buy')) return '📺';
-    if (s.includes('spencer')) return '🏬';
     if (s.includes('flipkart')) return '🛍️';
     return '🏬';
 }
 
-function buildDynamicStorePills() {
+/* ---------- build store checkboxes from actual card data ---------- */
+let allStoreLabels = [];   // [{name, label}]  for quick-search filtering
+let selectedStores = new Set(); // empty = all selected
+
+function buildStoreCheckboxes() {
     const allCards = document.querySelectorAll('.deal-item-card');
     const storeCounts = {};
-
     allCards.forEach(card => {
         const s = (card.getAttribute('data-store') || 'Other Store').trim();
         storeCounts[s] = (storeCounts[s] || 0) + 1;
     });
 
-    const container = document.getElementById('dynamicStorePillsContainer');
-    if (!container) return;
+    const row = document.getElementById('storeCheckboxesRow');
+    if (!row) return;
 
-    // Reset with "All Stores"
-    container.innerHTML = `
-        <button class="store-filter-btn ${activeStore === 'ALL' ? 'active-store-filter' : ''}" id="allStoresBtn" onclick="filterByStore('ALL', this)">
-            🌐 All Stores <span class="store-badge-count">${allCards.length}</span>
-        </button>
-    `;
+    const countSpan = document.getElementById('allStoresCountSpan');
+    if (countSpan) countSpan.textContent = allCards.length;
 
-    allStoreButtons = [];
-    const allBtn = document.getElementById('allStoresBtn');
-    if (allBtn) allStoreButtons.push({ name: 'all stores', btn: allBtn });
+    allStoreLabels = [];
 
-    // Sort stores by count (descending) so most popular stores appear first
-    const sortedStores = Object.keys(storeCounts).sort((a, b) => storeCounts[b] - storeCounts[a]);
-
-    sortedStores.forEach(storeName => {
-        const count = storeCounts[storeName];
+    const sorted = Object.keys(storeCounts).sort((a,b) => storeCounts[b] - storeCounts[a]);
+    sorted.forEach(storeName => {
+        const lbl = document.createElement('label');
+        lbl.className = 'store-check-label';
+        lbl.dataset.storeName = storeName.toLowerCase();
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = storeName;
+        cb.addEventListener('change', onStoreCheckChange);
         const emoji = getStoreEmoji(storeName);
-        const btn = document.createElement('button');
-        btn.className = `store-filter-btn ${activeStore.toLowerCase() === storeName.toLowerCase() ? 'active-store-filter' : ''}`;
-        btn.setAttribute('data-store-name', storeName);
-        btn.onclick = function() { filterByStore(storeName, this); };
-        btn.innerHTML = `${emoji} ${storeName} <span class="store-badge-count">${count}</span>`;
-        container.appendChild(btn);
-        allStoreButtons.push({ name: storeName.toLowerCase(), btn: btn });
+        lbl.appendChild(cb);
+        lbl.appendChild(document.createTextNode(`${emoji} ${storeName} (${storeCounts[storeName]})`) );
+        row.appendChild(lbl);
+        allStoreLabels.push({ name: storeName.toLowerCase(), lbl });
     });
 }
 
+/* Searching store pills (name-filter, not data-filter) */
 function filterStorePills(keyword) {
     const q = (keyword || '').toLowerCase().trim();
-    allStoreButtons.forEach(item => {
-        if (!q || item.name.includes(q)) {
-            item.btn.style.display = 'inline-flex';
-        } else {
-            item.btn.style.display = 'none';
-        }
+    allStoreLabels.forEach(({ name, lbl }) => {
+        lbl.style.display = (!q || name.includes(q)) ? '' : 'none';
     });
+    const allLbl = document.getElementById('storeCheckAll');
+    if (allLbl) allLbl.style.display = (!q || 'all stores'.includes(q)) ? '' : 'none';
 }
 
-function filterByStore(storeName, btnElement) {
-    activeStore = storeName;
-    currentVisible = 24;
+/* "All Stores" checkbox toggled */
+function onStoreAllChange(cb) {
+    if (cb.checked) {
+        selectedStores.clear();
+        // uncheck all individual stores
+        document.querySelectorAll('#storeCheckboxesRow input[type="checkbox"]').forEach(c => {
+            if (c !== cb) c.checked = false;
+        });
+        document.querySelectorAll('#storeCheckboxesRow .store-check-label').forEach(l => {
+            l.classList.remove('selected-store');
+        });
+        document.getElementById('storeCheckAll').classList.add('selected-store');
+    }
+    onFilterChange();
+}
 
-    document.querySelectorAll('.store-filter-btn').forEach(btn => {
-        btn.classList.remove('active-store-filter');
-    });
-    if (btnElement) {
-        btnElement.classList.add('active-store-filter');
+/* Individual store checkbox toggled */
+function onStoreCheckChange(evt) {
+    const cb = evt.target;
+    const storeName = cb.value;
+    const allCb = document.getElementById('cbStoreAll');
+
+    if (cb.checked) {
+        selectedStores.add(storeName.toLowerCase());
+        if (allCb) { allCb.checked = false; }
+        document.getElementById('storeCheckAll').classList.remove('selected-store');
+        cb.closest('.store-check-label').classList.add('selected-store');
+    } else {
+        selectedStores.delete(storeName.toLowerCase());
+        cb.closest('.store-check-label').classList.remove('selected-store');
+        if (selectedStores.size === 0) {
+            if (allCb) { allCb.checked = true; }
+            document.getElementById('storeCheckAll').classList.add('selected-store');
+        }
+    }
+    onFilterChange();
+}
+
+/* ---------- read active filter values ---------- */
+function getActiveFilters() {
+    const minP   = parseFloat(document.getElementById('filterMinPrice')?.value)   || null;
+    const maxP   = parseFloat(document.getElementById('filterMaxPrice')?.value)   || null;
+    const minD   = parseFloat(document.getElementById('filterMinDiscount')?.value) || null;
+    const minSav = parseFloat(document.getElementById('filterMinSavings')?.value)  || null;
+    const bestDeal  = document.getElementById('filterBestDeal')?.checked || false;
+    const inStock   = document.getElementById('filterInStock')?.checked  || false;
+    return { minP, maxP, minD, minSav, bestDeal, inStock };
+}
+
+/* ---------- count active filter slots for badge ---------- */
+function countActiveFilters(f) {
+    let n = 0;
+    if (f.minP !== null)                       n++;
+    if (f.maxP !== null)                       n++;
+    if (f.minD !== null)                       n++;
+    if (f.minSav !== null)                     n++;
+    if (f.bestDeal)                            n++;
+    if (f.inStock)                             n++;
+    if (selectedStores.size > 0)               n++;
+    return n;
+}
+
+/* ---------- card passes all filters? ---------- */
+function cardMatchesFilters(card, f) {
+    /* Store filter (OR within selected, AND with others) */
+    if (selectedStores.size > 0) {
+        const cardStore = (card.getAttribute('data-store') || '').toLowerCase();
+        const anyMatch = [...selectedStores].some(s => cardStore.includes(s));
+        if (!anyMatch) return false;
     }
 
-    updateDealsVisibility();
+    /* Price range */
+    const price = parseFloat(card.getAttribute('data-price'));
+    if (!isNaN(price) && price > 0) {
+        if (f.minP !== null && price < f.minP) return false;
+        if (f.maxP !== null && price > f.maxP) return false;
+    } else {
+        /* Missing/invalid price: fails if a price filter is set */
+        if (f.minP !== null || f.maxP !== null) return false;
+    }
+
+    /* Discount filter — uses savings_pct when available (real data), falls back to
+       discount_val (fabricated display value). If neither exists, fails filter. */
+    if (f.minD !== null) {
+        const discRaw = card.getAttribute('data-discount');
+        const disc = parseFloat(discRaw);
+        if (isNaN(disc) || discRaw === '' || discRaw === null) return false;
+        if (disc < f.minD) return false;
+    }
+
+    /* Savings filter — only passes when savings_amount is a verified number */
+    if (f.minSav !== null) {
+        const savRaw = card.getAttribute('data-savings');
+        if (savRaw === '' || savRaw === null || savRaw === 'None') return false;
+        const sav = parseFloat(savRaw);
+        if (isNaN(sav) || sav < f.minSav) return false;
+    }
+
+    /* Best Deal only */
+    if (f.bestDeal && card.getAttribute('data-is-best-deal') !== 'true') return false;
+
+    /* In-stock only — conservative: fails only if delivery/availability
+       explicitly says out of stock / unavailable / sold out */
+    if (f.inStock) {
+        const del = (card.getAttribute('data-delivery') || '').toLowerCase();
+        if (del.includes('out of stock') || del.includes('unavailable') || del.includes('sold out')) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
+/* ---------- main visibility update ---------- */
 function updateDealsVisibility() {
+    const f = getActiveFilters();
     const allCards = document.querySelectorAll('.deal-item-card');
     let matchedCount = 0;
     let visibleCount = 0;
 
     allCards.forEach(card => {
-        const store = card.getAttribute('data-store') || '';
-        const matchesStore = (activeStore === 'ALL' || store.toLowerCase().includes(activeStore.toLowerCase()));
-
-        if (matchesStore) {
+        if (cardMatchesFilters(card, f)) {
             matchedCount++;
             if (matchedCount <= currentVisible) {
                 card.classList.remove('hidden-deal-card');
@@ -407,31 +771,94 @@ function updateDealsVisibility() {
         }
     });
 
+    /* Result count */
     const visibleText = document.getElementById('visibleCountText');
-    const totalText = document.getElementById('totalCountText');
+    const totalText   = document.getElementById('totalCountText');
+    if (visibleText) visibleText.textContent = visibleCount;
+    if (totalText)   totalText.textContent   = matchedCount;
+
+    /* Load-more */
     const loadMoreContainer = document.getElementById('loadMoreContainer');
-    const remainingSpan = document.getElementById('remainingDealsCount');
-
-    if (visibleText) visibleText.innerText = visibleCount;
-    if (totalText) totalText.innerText = matchedCount;
-
+    const remainingSpan     = document.getElementById('remainingDealsCount');
     if (loadMoreContainer) {
         if (visibleCount >= matchedCount) {
             loadMoreContainer.style.display = 'none';
         } else {
             loadMoreContainer.style.display = 'block';
-            if (remainingSpan) remainingSpan.innerText = (matchedCount - visibleCount);
+            if (remainingSpan) remainingSpan.textContent = (matchedCount - visibleCount);
+        }
+    }
+
+    /* Empty-filter state */
+    const emptyState = document.getElementById('emptyFilterState');
+    const totalProducts = allCards.length;
+    if (emptyState) {
+        /* Show only if there are products server-side but none pass filters */
+        emptyState.style.display = (totalProducts > 0 && matchedCount === 0) ? 'block' : 'none';
+    }
+
+    /* Active filter badge */
+    const activeCount = countActiveFilters(f);
+    const badge = document.getElementById('activeFiltersBadge');
+    if (badge) {
+        if (activeCount > 0) {
+            badge.textContent = `${activeCount} active`;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
         }
     }
 }
 
+/* ---------- filter input change handler ---------- */
+function onFilterChange() {
+    currentVisible = 24;
+    updateDealsVisibility();
+}
+
+/* ---------- reset all filters ---------- */
+function resetAllFilters() {
+    /* Clear numeric inputs */
+    ['filterMinPrice','filterMaxPrice','filterMinDiscount','filterMinSavings'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+
+    /* Uncheck toggles */
+    ['filterBestDeal','filterInStock'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.checked = false;
+    });
+
+    /* Reset store selection to "All" */
+    selectedStores.clear();
+    const allCb  = document.getElementById('cbStoreAll');
+    if (allCb) allCb.checked = true;
+    const allLbl = document.getElementById('storeCheckAll');
+    if (allLbl) allLbl.classList.add('selected-store');
+    document.querySelectorAll('#storeCheckboxesRow .store-check-label').forEach(lbl => {
+        if (lbl.id !== 'storeCheckAll') lbl.classList.remove('selected-store');
+        const cb = lbl.querySelector('input[type="checkbox"]');
+        if (cb && cb.id !== 'cbStoreAll') cb.checked = false;
+    });
+
+    /* Clear store search */
+    const sq = document.getElementById('storeQuickSearch');
+    if (sq) { sq.value = ''; filterStorePills(''); }
+
+    currentVisible = 24;
+    updateDealsVisibility();
+}
+
+/* ---------- load-more ---------- */
 function loadMoreDeals() {
     currentVisible += batchSize;
     updateDealsVisibility();
 }
 
+/* ---------- init ---------- */
 document.addEventListener('DOMContentLoaded', function() {
-    buildDynamicStorePills();
+    buildStoreCheckboxes();
     updateDealsVisibility();
 });
 </script>
