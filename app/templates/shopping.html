@@ -20,10 +20,14 @@
             <div class="search-input-group">
                 <i class="fas fa-magnifying-glass search-icon"></i>
                 <input type="text" name="q" value="{{ current_query }}" placeholder="Search products, clothes, makeup, gadgets, shoes, electronics (e.g. Makeup kit, iPhone 15, Designer clothes)..." required autocomplete="off">
-                <select name="sort" class="sort-select" onchange="this.form.submit()">
-                    <option value="price_low" {% if current_sort == 'price_low' %}selected{% endif %}>💰 Lowest Price First</option>
-                    <option value="rating" {% if current_sort == 'rating' %}selected{% endif %}>⭐ Highest Rated</option>
-                    <option value="price_high" {% if current_sort == 'price_high' %}selected{% endif %}>💎 Premium First</option>
+                <select name="sort" id="searchSortSelect" class="sort-select" onchange="onSortChange(this.value)">
+                    <option value="relevance" {% if current_sort == 'relevance' or not current_sort %}selected{% endif %}>Relevance</option>
+                    <option value="price_low" {% if current_sort == 'price_low' %}selected{% endif %}>Price: Low to High</option>
+                    <option value="price_high" {% if current_sort == 'price_high' %}selected{% endif %}>Price: High to Low</option>
+                    <option value="discount_high" {% if current_sort == 'discount_high' %}selected{% endif %}>Highest Discount</option>
+                    <option value="savings_high" {% if current_sort == 'savings_high' %}selected{% endif %}>Highest Savings</option>
+                    <option value="best_deal" {% if current_sort == 'best_deal' %}selected{% endif %}>Best Deal First</option>
+                    {% if current_sort == 'rating' %}<option value="rating" selected>Highest Rated</option>{% endif %}
                 </select>
                 <button type="submit" class="btn-primary">
                     <i class="fas fa-bolt"></i> Search Deals
@@ -153,12 +157,28 @@
             Showing <strong id="visibleCountText">{{ [results.products|length, 24] | min }}</strong>
             of <strong id="totalCountText">{{ results.products|length }}</strong>
             live store offers for <span class="search-term">"{{ current_query }}"</span>
-            <span class="sort-tag-info">
-                (Sorted by: {% if current_sort == 'price_low' %}Lowest Price First{% elif current_sort == 'price_high' %}Highest Price First{% elif current_sort == 'rating' %}Highest Customer Rating{% endif %})
+            <span class="sort-tag-info" id="sortTagInfo">
+                (Sorted by: <span id="sortTagLabel">{% if current_sort == 'price_low' %}Price: Low to High{% elif current_sort == 'price_high' %}Price: High to Low{% elif current_sort == 'discount_high' %}Highest Discount{% elif current_sort == 'savings_high' %}Highest Savings{% elif current_sort == 'best_deal' %}Best Deal First{% elif current_sort == 'rating' %}Highest Rated{% else %}Relevance{% endif %}</span>)
             </span>
         </div>
-        <div class="engine-badge">
-            <i class="fas fa-shield-check"></i> {{ results.source_type }}
+        <div class="results-bar-actions" style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+            <div class="results-sort-wrapper" style="display: flex; align-items: center; gap: 8px;">
+                <label for="resultsSortSelect" style="font-size: 13px; font-weight: 600; color: #94a3b8; display: flex; align-items: center; gap: 5px;">
+                    <i class="fas fa-arrow-down-short-wide"></i> Sort by:
+                </label>
+                <select id="resultsSortSelect" class="sort-select" onchange="onSortChange(this.value)" style="padding: 6px 12px; font-size: 13px; border-radius: 10px;">
+                    <option value="relevance" {% if current_sort == 'relevance' or not current_sort %}selected{% endif %}>Relevance</option>
+                    <option value="price_low" {% if current_sort == 'price_low' %}selected{% endif %}>Price: Low to High</option>
+                    <option value="price_high" {% if current_sort == 'price_high' %}selected{% endif %}>Price: High to Low</option>
+                    <option value="discount_high" {% if current_sort == 'discount_high' %}selected{% endif %}>Highest Discount</option>
+                    <option value="savings_high" {% if current_sort == 'savings_high' %}selected{% endif %}>Highest Savings</option>
+                    <option value="best_deal" {% if current_sort == 'best_deal' %}selected{% endif %}>Best Deal First</option>
+                    {% if current_sort == 'rating' %}<option value="rating" selected>Highest Rated</option>{% endif %}
+                </select>
+            </div>
+            <div class="engine-badge">
+                <i class="fas fa-shield-check"></i> {{ results.source_type }}
+            </div>
         </div>
     </div>
 
@@ -554,13 +574,146 @@
 
 <script>
 /* ═══════════════════════════════════════════════════════════════════════════
-   ADVANCED FILTERS ENGINE — Feature #8
-   All filtering is purely client-side; no SerpAPI requests are ever triggered
-   by filter interactions.
+   ADVANCED FILTERS & BETTER SORTING ENGINE — Features #8 & #9
+   All filtering and sorting is purely client-side; no SerpAPI requests are ever
+   triggered by filter or sort interactions.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const batchSize = 24;
 let currentVisible = 24;
+let currentSort = "{{ current_sort or 'relevance' }}";
+
+const sortLabels = {
+    'relevance': 'Relevance',
+    'price_low': 'Price: Low to High',
+    'price_high': 'Price: High to Low',
+    'discount_high': 'Highest Discount',
+    'savings_high': 'Highest Savings',
+    'best_deal': 'Best Deal First',
+    'rating': 'Highest Rated'
+};
+
+/* ---------- sort change handler ---------- */
+function onSortChange(newSort) {
+    currentSort = newSort;
+
+    // Sync both dropdowns if present
+    ['searchSortSelect', 'resultsSortSelect'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.value !== newSort) {
+            el.value = newSort;
+        }
+    });
+
+    // Update results bar label
+    const labelSpan = document.getElementById('sortTagLabel');
+    if (labelSpan) {
+        labelSpan.textContent = sortLabels[newSort] || 'Relevance';
+    }
+
+    applySorting();
+    currentVisible = 24;
+    updateDealsVisibility();
+}
+
+/* ---------- sort DOM cards deterministically ---------- */
+function applySorting() {
+    const grid = document.getElementById('dealsGrid');
+    if (!grid) return;
+
+    const cards = Array.from(grid.querySelectorAll('.deal-item-card'));
+    if (!cards.length) return;
+
+    cards.sort((a, b) => {
+        const idxA = parseInt(a.getAttribute('data-index') || '0', 10);
+        const idxB = parseInt(b.getAttribute('data-index') || '0', 10);
+
+        if (currentSort === 'price_low') {
+            const rawA = a.getAttribute('data-price');
+            const rawB = b.getAttribute('data-price');
+            const pA = parseFloat(rawA);
+            const pB = parseFloat(rawB);
+            const validA = rawA !== '' && rawA !== null && !isNaN(pA) && pA > 0;
+            const validB = rawB !== '' && rawB !== null && !isNaN(pB) && pB > 0;
+            if (validA && validB) {
+                if (pA !== pB) return pA - pB;
+                return idxA - idxB;
+            }
+            if (validA && !validB) return -1;
+            if (!validA && validB) return 1;
+            return idxA - idxB;
+        }
+
+        if (currentSort === 'price_high') {
+            const rawA = a.getAttribute('data-price');
+            const rawB = b.getAttribute('data-price');
+            const pA = parseFloat(rawA);
+            const pB = parseFloat(rawB);
+            const validA = rawA !== '' && rawA !== null && !isNaN(pA) && pA > 0;
+            const validB = rawB !== '' && rawB !== null && !isNaN(pB) && pB > 0;
+            if (validA && validB) {
+                if (pA !== pB) return pB - pA;
+                return idxA - idxB;
+            }
+            if (validA && !validB) return -1;
+            if (!validA && validB) return 1;
+            return idxA - idxB;
+        }
+
+        if (currentSort === 'discount_high') {
+            const rawA = a.getAttribute('data-discount');
+            const rawB = b.getAttribute('data-discount');
+            const dA = parseFloat(rawA);
+            const dB = parseFloat(rawB);
+            const validA = rawA !== '' && rawA !== null && !isNaN(dA) && dA > 0;
+            const validB = rawB !== '' && rawB !== null && !isNaN(dB) && dB > 0;
+            if (validA && validB) {
+                if (dA !== dB) return dB - dA;
+                return idxA - idxB;
+            }
+            if (validA && !validB) return -1;
+            if (!validA && validB) return 1;
+            return idxA - idxB;
+        }
+
+        if (currentSort === 'savings_high') {
+            const rawA = a.getAttribute('data-savings');
+            const rawB = b.getAttribute('data-savings');
+            const sA = parseFloat(rawA);
+            const sB = parseFloat(rawB);
+            const validA = rawA !== '' && rawA !== null && rawA !== 'None' && !isNaN(sA) && sA > 0;
+            const validB = rawB !== '' && rawB !== null && rawB !== 'None' && !isNaN(sB) && sB > 0;
+            if (validA && validB) {
+                if (sA !== sB) return sB - sA;
+                return idxA - idxB;
+            }
+            if (validA && !validB) return -1;
+            if (!validA && validB) return 1;
+            return idxA - idxB;
+        }
+
+        if (currentSort === 'best_deal') {
+            const isBestA = a.getAttribute('data-is-best-deal') === 'true';
+            const isBestB = b.getAttribute('data-is-best-deal') === 'true';
+            if (isBestA && !isBestB) return -1;
+            if (!isBestA && isBestB) return 1;
+            return idxA - idxB;
+        }
+
+        // 'relevance' / default: preserve initial search ranking
+        return idxA - idxB;
+    });
+
+    // Re-insert cards in sorted order before empty state
+    const emptyState = document.getElementById('emptyFilterState');
+    cards.forEach(card => {
+        if (emptyState) {
+            grid.insertBefore(card, emptyState);
+        } else {
+            grid.appendChild(card);
+        }
+    });
+}
 
 /* ---------- panel collapse state ---------- */
 function toggleFiltersPanel() {
@@ -859,6 +1012,9 @@ function loadMoreDeals() {
 /* ---------- init ---------- */
 document.addEventListener('DOMContentLoaded', function() {
     buildStoreCheckboxes();
+    if (currentSort && currentSort !== 'relevance') {
+        applySorting();
+    }
     updateDealsVisibility();
 });
 </script>

@@ -9,7 +9,7 @@ shopping_bp = Blueprint('shopping', __name__)
 def index():
     """Render the Live Shopping Price Comparison and Deals Finder page"""
     query = request.args.get('q', 'wireless earbuds').strip()
-    sort_by = request.args.get('sort', 'price_low').strip()
+    sort_by = request.args.get('sort', 'relevance').strip()
     user_currency = getattr(current_user, 'currency', None) or '₹'
     
     results = search_shopping_deals(query, sort_by=sort_by, currency=user_currency)
@@ -21,7 +21,7 @@ def index():
 def api_search():
     """AJAX API endpoint for live price search"""
     query = request.args.get('q', '').strip()
-    sort_by = request.args.get('sort', 'price_low').strip()
+    sort_by = request.args.get('sort', 'relevance').strip()
     user_currency = getattr(current_user, 'currency', None) or '₹'
     
     results = search_shopping_deals(query, sort_by=sort_by, currency=user_currency)

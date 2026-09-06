@@ -823,30 +823,192 @@ def select_best_deal(products):
     return products
 
 
-def apply_sorting_and_badges(products, sort_by):
+def _extract_sort_price(p):
+    """Safely extract valid positive numeric price or return None."""
+    if not isinstance(p, dict):
+        return None
+    raw = p.get("price_val")
+    if raw is not None:
+        try:
+            val = float(raw)
+            if val > 0:
+                return val
+            return None
+        except (ValueError, TypeError):
+            return None
+    raw_str = str(p.get("price") or "")
+    try:
+        nums = re.findall(r"[\d,]+\.?\d*", raw_str.replace(",", ""))
+        if nums:
+            val = float(nums[0])
+            if val > 0:
+                return val
+    except Exception:
+        pass
+    return None
+
+
+def _extract_sort_discount(p):
+    """Safely extract verified discount percentage or return None."""
+    if not isinstance(p, dict):
+        return None
+    # Check verified savings_pct (#7) first
+    sp = p.get("savings_pct")
+    if sp is not None:
+        try:
+            val = float(sp)
+            if val > 0:
+                return val
+        except (ValueError, TypeError):
+            pass
+    # Check discount_val
+    dv = p.get("discount_val")
+    if dv is not None:
+        try:
+            val = float(dv)
+            if val > 0:
+                return val
+        except (ValueError, TypeError):
+            pass
+    # Regex fallback on discount string e.g. "20% OFF"
+    d_str = str(p.get("discount") or "")
+    m = re.search(r"(\d+(?:\.\d+)?)\s*%", d_str)
+    if m:
+        try:
+            val = float(m.group(1))
+            if val > 0:
+                return val
+        except (ValueError, TypeError):
+            pass
+    return None
+
+
+def _extract_sort_savings(p):
+    """Safely extract verified savings_amount (#7) or return None."""
+    if not isinstance(p, dict):
+        return None
+    sa = p.get("savings_amount")
+    if sa is not None:
+        try:
+            val = float(sa)
+            if val > 0:
+                return val
+        except (ValueError, TypeError):
+            pass
+    return None
+
+
+def sort_products(products, sort_by="relevance"):
+    """
+    Sort products based on reliable, verified criteria (Feature #9).
+
+    Supported sort_by options:
+    - "relevance" / "default": Preserves original search/result order
+    - "price_low" / "price_asc": Smallest valid current price first; missing/invalid at the end
+    - "price_high" / "price_desc": Largest valid current price first; missing/invalid at the end
+    - "discount_high" / "highest_discount": Highest verified discount % first; missing at the end
+    - "savings_high" / "highest_savings": Highest verified savings amount first; missing at the end
+    - "best_deal" / "best_deal_first": Existing Best Deal product (Feature #6) first; safe order otherwise
+    - "rating" / "highest_rated": Highest customer rating first
+
+    Key invariants:
+    - Stable: preserves relative order between items with identical sort values.
+    - Safe: Missing/invalid prices (None, <=0, non-numeric) are NEVER treated as 0;
+      they are placed safely at the end of both low-to-high and high-to-low sorts.
+    - Verified data only: does not fabricate or calculate missing discounts/savings.
+    - Does NOT mutate input list in-place (returns a new list).
+    - Preserves is_best_deal, savings_amount, savings_pct, savings_str, thumbnails, links.
+    - Handles empty list, None, malformed product objects without crashing.
+    """
+    if not products or not isinstance(products, list):
+        return []
+
+    # Shallow copy to avoid mutating the original input list
+    items = list(products)
+    s_key = (sort_by or "relevance").lower().strip()
+
+    if s_key in ("relevance", "default"):
+        return items
+
+    elif s_key in ("price_low", "price_asc", "price_low_to_high", "low_to_high"):
+        def _price_low_key(item):
+            pv = _extract_sort_price(item)
+            if pv is not None:
+                return (0, pv)
+            return (1, 0)
+        return sorted(items, key=_price_low_key)
+
+    elif s_key in ("price_high", "price_desc", "price_high_to_low", "high_to_low"):
+        def _price_high_key(item):
+            pv = _extract_sort_price(item)
+            if pv is not None:
+                return (0, -pv)
+            return (1, 0)
+        return sorted(items, key=_price_high_key)
+
+    elif s_key in ("discount_high", "highest_discount", "discount"):
+        def _discount_key(item):
+            dv = _extract_sort_discount(item)
+            if dv is not None:
+                return (0, -dv)
+            return (1, 0)
+        return sorted(items, key=_discount_key)
+
+    elif s_key in ("savings_high", "highest_savings", "savings"):
+        def _savings_key(item):
+            sv = _extract_sort_savings(item)
+            if sv is not None:
+                return (0, -sv)
+            return (1, 0)
+        return sorted(items, key=_savings_key)
+
+    elif s_key in ("best_deal", "best_deal_first"):
+        def _best_deal_key(item):
+            if isinstance(item, dict) and item.get("is_best_deal") is True:
+                return 0
+            return 1
+        return sorted(items, key=_best_deal_key)
+
+    elif s_key in ("rating", "highest_rated"):
+        def _rating_key(item):
+            if isinstance(item, dict):
+                try:
+                    r = float(item.get("rating") or 0.0)
+                    if r > 0:
+                        return (0, -r)
+                except (ValueError, TypeError):
+                    pass
+            return (1, 0)
+        return sorted(items, key=_rating_key)
+
+    # Fallback to preserving original order
+    return items
+
+
+def apply_sorting_and_badges(products, sort_by="relevance"):
     """Sort products and assign badges while preserving complete product-image association"""
-    if not products:
+    if not products or not isinstance(products, list):
         return
 
-    # Identify the single best deal
+    # Identify the single best deal (Feature #6)
     select_best_deal(products)
 
     min_price_item = min((p for p in products if isinstance(p, dict) and p.get("price_val", 0) > 0), key=lambda x: x["price_val"], default=None)
     if min_price_item:
         min_price_item["is_lowest_price"] = True
 
-    if sort_by == "price_low":
-        products.sort(key=lambda x: x["price_val"] if isinstance(x, dict) and x.get("price_val") else float('inf'))
-        if products and products[0].get("price_val", 0) > 0:
-            products[0]["badge"] = "🔥 Lowest Price Deal"
-            products[0]["is_best_price"] = True
-    elif sort_by == "price_high":
-        products.sort(key=lambda x: x["price_val"] if isinstance(x, dict) and x.get("price_val") else 0.0, reverse=True)
-        if products:
-            products[0]["badge"] = "💎 Premium / High-End"
-            products[0]["is_premium"] = True
-    elif sort_by == "rating":
-        products.sort(key=lambda x: float(x.get("rating") or 0) if isinstance(x, dict) else 0.0, reverse=True)
-        if products:
-            products[0]["badge"] = "⭐ Highest Customer Rated"
-            products[0]["is_top_rated"] = True
+    # Sort using sort_products
+    sorted_items = sort_products(products, sort_by=sort_by)
+    products[:] = sorted_items
+
+    # Assign badges based on sort
+    s_key = (sort_by or "relevance").lower().strip()
+    if s_key in ("price_low", "price_asc", "low_to_high") and products and products[0].get("price_val", 0) > 0:
+        products[0]["badge"] = "🔥 Lowest Price Deal"
+        products[0]["is_best_price"] = True
+    elif s_key in ("price_high", "price_desc", "high_to_low") and products:
+        products[0]["badge"] = "💎 Premium / High-End"
+        products[0]["is_premium"] = True
+    elif s_key in ("rating", "highest_rated") and products:
+        products[0]["badge"] = "⭐ Highest Customer Rated"
+        products[0]["is_top_rated"] = True
