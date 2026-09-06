@@ -22,6 +22,7 @@
                 <input type="text" name="q" value="{{ current_query }}" placeholder="Search products, clothes, makeup, gadgets, shoes, electronics (e.g. Makeup kit, iPhone 15, Designer clothes)..." required autocomplete="off">
                 <select name="sort" id="searchSortSelect" class="sort-select" onchange="onSortChange(this.value)">
                     <option value="relevance" {% if current_sort == 'relevance' or not current_sort %}selected{% endif %}>Relevance</option>
+                    <option value="deal_score_high" {% if current_sort == 'deal_score_high' or current_sort == 'deal_score' %}selected{% endif %}>Deal Score: High → Low</option>
                     <option value="price_low" {% if current_sort == 'price_low' %}selected{% endif %}>Price: Low to High</option>
                     <option value="price_high" {% if current_sort == 'price_high' %}selected{% endif %}>Price: High to Low</option>
                     <option value="discount_high" {% if current_sort == 'discount_high' %}selected{% endif %}>Highest Discount</option>
@@ -158,7 +159,7 @@
             of <strong id="totalCountText">{{ results.products|length }}</strong>
             live store offers for <span class="search-term">"{{ current_query }}"</span>
             <span class="sort-tag-info" id="sortTagInfo">
-                (Sorted by: <span id="sortTagLabel">{% if current_sort == 'price_low' %}Price: Low to High{% elif current_sort == 'price_high' %}Price: High to Low{% elif current_sort == 'discount_high' %}Highest Discount{% elif current_sort == 'savings_high' %}Highest Savings{% elif current_sort == 'best_deal' %}Best Deal First{% elif current_sort == 'rating' %}Highest Rated{% else %}Relevance{% endif %}</span>)
+                (Sorted by: <span id="sortTagLabel">{% if current_sort == 'deal_score_high' or current_sort == 'deal_score' %}Deal Score: High → Low{% elif current_sort == 'price_low' %}Price: Low to High{% elif current_sort == 'price_high' %}Price: High to Low{% elif current_sort == 'discount_high' %}Highest Discount{% elif current_sort == 'savings_high' %}Highest Savings{% elif current_sort == 'best_deal' %}Best Deal First{% elif current_sort == 'rating' %}Highest Rated{% else %}Relevance{% endif %}</span>)
             </span>
         </div>
         <div class="results-bar-actions" style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
@@ -168,6 +169,7 @@
                 </label>
                 <select id="resultsSortSelect" class="sort-select" onchange="onSortChange(this.value)" style="padding: 6px 12px; font-size: 13px; border-radius: 10px;">
                     <option value="relevance" {% if current_sort == 'relevance' or not current_sort %}selected{% endif %}>Relevance</option>
+                    <option value="deal_score_high" {% if current_sort == 'deal_score_high' or current_sort == 'deal_score' %}selected{% endif %}>Deal Score: High → Low</option>
                     <option value="price_low" {% if current_sort == 'price_low' %}selected{% endif %}>Price: Low to High</option>
                     <option value="price_high" {% if current_sort == 'price_high' %}selected{% endif %}>Price: High to Low</option>
                     <option value="discount_high" {% if current_sort == 'discount_high' %}selected{% endif %}>Highest Discount</option>
@@ -200,6 +202,7 @@
              data-discount="{{ item.savings_pct if item.savings_pct is not none else (item.discount_val | default('', true)) }}"
              data-is-best-deal="{{ 'true' if item.is_best_deal else 'false' }}"
              data-delivery="{{ item.delivery | lower }}"
+             data-deal-score="{{ item.deal_score if item.deal_score is not none else '' }}"
              data-index="{{ loop.index }}">
             <!-- Badges -->
             <div class="deal-badges-container">
@@ -260,6 +263,14 @@
                     <span>{{ item.savings_str }}</span>
                 </div>
                 {% endif %}
+
+                <!-- Deal Score Display (Feature #10) -->
+                <div class="deal-score-badge-row" style="margin: 6px 0 10px;">
+                    <div class="deal-score-pill" title="Deal Score evaluates price competitiveness, verified discount, and verified savings across returned offers." style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 20px; font-size: 12px; font-weight: 700; background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.28); color: #c7d2fe; user-select: none;">
+                        <i class="fas fa-chart-line" style="color: #818cf8; font-size: 11px;"></i>
+                        <span>Deal Score: {% if item.deal_score is not none %}<strong style="color: #ffffff;">{{ item.deal_score }}</strong>/100{% else %}<span style="color: #94a3b8; font-weight: 500;">N/A</span>{% endif %}</span>
+                    </div>
+                </div>
 
                 <!-- Direct Official Store External Link -->
                 <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer" class="btn-deal" title="Open product directly on {{ item.source }}">
@@ -585,6 +596,8 @@ let currentSort = "{{ current_sort or 'relevance' }}";
 
 const sortLabels = {
     'relevance': 'Relevance',
+    'deal_score_high': 'Deal Score: High → Low',
+    'deal_score': 'Deal Score: High → Low',
     'price_low': 'Price: Low to High',
     'price_high': 'Price: High to Low',
     'discount_high': 'Highest Discount',
@@ -627,6 +640,22 @@ function applySorting() {
     cards.sort((a, b) => {
         const idxA = parseInt(a.getAttribute('data-index') || '0', 10);
         const idxB = parseInt(b.getAttribute('data-index') || '0', 10);
+
+        if (currentSort === 'deal_score_high' || currentSort === 'deal_score') {
+            const rawA = a.getAttribute('data-deal-score');
+            const rawB = b.getAttribute('data-deal-score');
+            const sA = parseFloat(rawA);
+            const sB = parseFloat(rawB);
+            const validA = rawA !== '' && rawA !== null && !isNaN(sA);
+            const validB = rawB !== '' && rawB !== null && !isNaN(sB);
+            if (validA && validB) {
+                if (sA !== sB) return sB - sA;
+                return idxA - idxB;
+            }
+            if (validA && !validB) return -1;
+            if (!validA && validB) return 1;
+            return idxA - idxB;
+        }
 
         if (currentSort === 'price_low') {
             const rawA = a.getAttribute('data-price');

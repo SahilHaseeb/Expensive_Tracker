@@ -541,6 +541,7 @@ def _process_serpapi_results(serpapi_results, query, target_curr="Rs."):
             "savings_amount": savings_data["savings_amount"] if savings_data else None,
             "savings_pct":    savings_data["savings_pct"]    if savings_data else None,
             "savings_str":    savings_data["savings_str"]    if savings_data else None,
+            "deal_score":     None,
         })
 
     return products
@@ -704,6 +705,7 @@ def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
 
     if final_products:
         select_best_deal(final_products)
+        calculate_deal_scores(final_products)
         apply_sorting_and_badges(final_products, sort_by)
         return {
             "status": "success",
@@ -898,12 +900,152 @@ def _extract_sort_savings(p):
     return None
 
 
+def calculate_single_deal_score(product, min_price=None, max_price=None, max_savings=None):
+    """
+    Calculate a deterministic Deal Score (0–100) for a single product offer (Feature #10).
+
+    Components and sensible weights (documented for clarity and maintainability):
+    1. Price Competitiveness (up to 40 pts):
+       - If batch min_price and max_price are known and max_price > min_price:
+         Linear interpolation: lowest price gets 40, highest gets 15.
+       - If min_price == max_price or not provided:
+         Baseline 28 pts out of 40.
+    2. Verified Discount (up to 25 pts):
+       - Uses verified discount percentage (savings_pct from #7 or discount_val).
+       - If present and > 0: min(25.0, (discount_pct / 50.0) * 25.0).
+       - If missing/None: neutral baseline of 8.0 pts (does not unfairly punish missing discount with 0).
+    3. Verified Savings (up to 20 pts):
+       - Uses verified savings_amount from Feature #7.
+       - If present and > 0:
+         If max_savings and max_savings > 0:
+           savings_pts = min(20.0, (savings_amount / max_savings) * 20.0)
+         Else:
+           savings_ratio = savings_amount / (savings_amount + pv)
+           savings_pts = min(20.0, savings_ratio * 40.0)
+       - If missing/None: neutral baseline of 6.0 pts.
+    4. Offer Quality & Credibility (up to 15 pts):
+       - Availability: in-stock (+5 pts; explicitly out-of-stock gets 0).
+       - Store reputation: known retailer (+3 pts).
+       - Customer rating & reviews: rating >= 4.0 gets up to +4 pts.
+       - Best Deal status: Feature #6 is_best_deal (+3 pts).
+
+    Returns:
+       Integer between 0 and 100, or None if price is missing / invalid (<= 0).
+    """
+    if not isinstance(product, dict):
+        return None
+
+    # 1. Price check — essential requirement
+    pv = _extract_sort_price(product)
+    if pv is None or pv <= 0:
+        return None
+
+    # ── Component 1: Price Competitiveness (up to 40 pts) ──
+    if min_price is not None and max_price is not None and max_price > min_price:
+        price_ratio = (max_price - pv) / (max_price - min_price)
+        price_ratio = max(0.0, min(1.0, price_ratio))
+        price_pts = 15.0 + 25.0 * price_ratio
+    else:
+        price_pts = 28.0
+
+    # ── Component 2: Verified Discount (up to 25 pts) ──
+    dv = _extract_sort_discount(product)
+    if dv is not None and dv > 0:
+        discount_pts = min(25.0, (dv / 50.0) * 25.0)
+    else:
+        discount_pts = 8.0
+
+    # ── Component 3: Verified Savings (up to 20 pts) ──
+    sv = _extract_sort_savings(product)
+    if sv is not None and sv > 0:
+        if max_savings is not None and max_savings > 0:
+            savings_pts = min(20.0, (sv / max_savings) * 20.0)
+        else:
+            savings_ratio = sv / (sv + pv)
+            savings_pts = min(20.0, savings_ratio * 40.0)
+    else:
+        savings_pts = 6.0
+
+    # ── Component 4: Offer Quality & Credibility (up to 15 pts) ──
+    quality_pts = 0.0
+
+    # In-Stock check (5 pts)
+    delivery_str = str(product.get("delivery") or "").lower()
+    avail_str = str(product.get("availability") or "").lower()
+    is_oos = any(k in delivery_str or k in avail_str for k in ("out of stock", "unavailable", "sold out"))
+    if not is_oos:
+        quality_pts += 5.0
+
+    # Store credibility (3 pts)
+    source = str(product.get("source") or "").strip().lower()
+    if source and source not in ("online store", "unknown", ""):
+        quality_pts += 3.0
+
+    # Rating / Reviews (up to 4 pts)
+    try:
+        r = float(product.get("rating") or 0.0)
+        if r >= 4.5:
+            quality_pts += 4.0
+        elif r >= 4.0:
+            quality_pts += 3.0
+        elif r >= 3.0:
+            quality_pts += 2.0
+        elif r > 0:
+            quality_pts += 1.0
+    except (ValueError, TypeError):
+        pass
+
+    # Best Deal bonus from Feature #6 (3 pts)
+    if product.get("is_best_deal") is True:
+        quality_pts += 3.0
+
+    total_score = round(price_pts + discount_pts + savings_pts + quality_pts)
+    return max(0, min(100, total_score))
+
+
+def calculate_deal_scores(products):
+    """
+    Calculate and attach deterministic Deal Score (0–100) to each product in a batch (Feature #10).
+    - Relative to returned offers: finds min/max price and max savings across the batch.
+    - Missing/invalid prices receive deal_score = None (displayed as 'N/A').
+    - Preserves all existing product attributes.
+    Returns the products list.
+    """
+    if not products or not isinstance(products, list):
+        return []
+
+    # Find batch boundaries for relative price and savings scoring
+    valid_prices = []
+    valid_savings = []
+    for p in products:
+        if isinstance(p, dict):
+            pv = _extract_sort_price(p)
+            if pv is not None and pv > 0:
+                valid_prices.append(pv)
+            sv = _extract_sort_savings(p)
+            if sv is not None and sv > 0:
+                valid_savings.append(sv)
+
+    min_p = min(valid_prices) if valid_prices else None
+    max_p = max(valid_prices) if valid_prices else None
+    max_s = max(valid_savings) if valid_savings else None
+
+    for p in products:
+        if isinstance(p, dict):
+            p["deal_score"] = calculate_single_deal_score(
+                p, min_price=min_p, max_price=max_p, max_savings=max_s
+            )
+
+    return products
+
+
 def sort_products(products, sort_by="relevance"):
     """
-    Sort products based on reliable, verified criteria (Feature #9).
+    Sort products based on reliable, verified criteria (Features #9 & #10).
 
     Supported sort_by options:
     - "relevance" / "default": Preserves original search/result order
+    - "deal_score_high" / "deal_score": Highest Deal Score (0–100) first; missing at the end
     - "price_low" / "price_asc": Smallest valid current price first; missing/invalid at the end
     - "price_high" / "price_desc": Largest valid current price first; missing/invalid at the end
     - "discount_high" / "highest_discount": Highest verified discount % first; missing at the end
@@ -917,7 +1059,7 @@ def sort_products(products, sort_by="relevance"):
       they are placed safely at the end of both low-to-high and high-to-low sorts.
     - Verified data only: does not fabricate or calculate missing discounts/savings.
     - Does NOT mutate input list in-place (returns a new list).
-    - Preserves is_best_deal, savings_amount, savings_pct, savings_str, thumbnails, links.
+    - Preserves is_best_deal, savings_amount, savings_pct, savings_str, deal_score, thumbnails, links.
     - Handles empty list, None, malformed product objects without crashing.
     """
     if not products or not isinstance(products, list):
@@ -929,6 +1071,19 @@ def sort_products(products, sort_by="relevance"):
 
     if s_key in ("relevance", "default"):
         return items
+
+    elif s_key in ("deal_score_high", "deal_score", "score_high", "score"):
+        def _deal_score_key(item):
+            if isinstance(item, dict):
+                score = item.get("deal_score")
+                if score is not None:
+                    try:
+                        s_val = float(score)
+                        return (0, -s_val)
+                    except (ValueError, TypeError):
+                        pass
+            return (1, 0)
+        return sorted(items, key=_deal_score_key)
 
     elif s_key in ("price_low", "price_asc", "price_low_to_high", "low_to_high"):
         def _price_low_key(item):
