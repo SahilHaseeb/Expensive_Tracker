@@ -570,79 +570,187 @@ def clean_store_search_query(query_title):
     q = re.sub(r'\bkapre\b', 'clothes', q, flags=re.IGNORECASE)
     q = re.sub(r'\bshooes\b', 'shoes', q, flags=re.IGNORECASE)
     q = re.sub(r'\s+', ' ', q).strip()
-    return q if len(q) >= 2 else query_title.strip()
+    return q if len(q) >= 2 else str(query_title or "").strip()
 
 
 def get_direct_store_url(store_name, raw_query):
-    """Build direct search URL to the actual official retailer website"""
+    """
+    Build direct search URL to the retailer website for general store search.
+    NOTE: NEVER used as a product deal link fallback, to prevent product identity mismatch.
+    """
     cleaned_q = clean_store_search_query(raw_query)
     encoded_q = urllib.parse.quote_plus(cleaned_q)
     store_lower = (store_name or "").lower().strip()
-
-    if "sam's club" in store_lower or "sams club" in store_lower or "samsclub" in store_lower:
-        return f"https://www.samsclub.com/s/{encoded_q}"
-    elif "ikea" in store_lower:
-        return f"https://www.ikea.com/us/en/search/?q={encoded_q}"
-    elif "staples" in store_lower:
-        return f"https://www.staples.com/search?q={encoded_q}"
-    elif "daraz" in store_lower:
+    if "daraz" in store_lower:
         return f"https://www.daraz.pk/catalog/?q={encoded_q}"
-    elif "aliexpress" in store_lower:
-        return f"https://www.aliexpress.com/wholesale?SearchText={encoded_q}"
     elif "amazon" in store_lower:
         return f"https://www.amazon.com/s?k={encoded_q}"
-    elif "sephora" in store_lower:
-        return f"https://www.sephora.com/search?keyword={encoded_q}"
-    elif "flipkart" in store_lower:
-        return f"https://www.flipkart.com/search?q={encoded_q}"
     elif "walmart" in store_lower:
         return f"https://www.walmart.com/search?q={encoded_q}"
     elif "ebay" in store_lower:
         return f"https://www.ebay.com/sch/i.html?_nkw={encoded_q}"
-    elif "target" in store_lower:
-        return f"https://www.target.com/s?searchTerm={encoded_q}"
-    elif "bestbuy" in store_lower or "best buy" in store_lower:
-        return f"https://www.bestbuy.com/site/searchpage.jsp?st={encoded_q}"
-    elif "kohl" in store_lower:
-        return f"https://www.kohls.com/search.jsp?search={encoded_q}"
-    elif "lowe" in store_lower:
-        return f"https://www.lowes.com/search?searchTerm={encoded_q}"
-    elif "home depot" in store_lower or "homedepot" in store_lower:
-        return f"https://www.homedepot.com/s/{encoded_q}"
-    elif "wayfair" in store_lower:
-        return f"https://www.wayfair.com/keyword.php?keyword={encoded_q}"
-    elif "macy" in store_lower:
-        return f"https://www.macys.com/shop/featured/{encoded_q}"
-    elif "costco" in store_lower:
-        return f"https://www.costco.com/CatalogSearch?dept=All&keyword={encoded_q}"
-    elif "newegg" in store_lower:
-        return f"https://www.newegg.com/p/pl?d={encoded_q}"
-    elif "temu" in store_lower:
-        return f"https://www.temu.com/search_result.html?search_key={encoded_q}"
-    elif "shein" in store_lower:
-        return f"https://www.shein.com/pdsearch/{encoded_q}/"
-    elif "etsy" in store_lower:
-        return f"https://www.etsy.com/search?q={encoded_q}"
-    elif "nike" in store_lower:
-        return f"https://www.nike.com/w?q={encoded_q}"
-    elif "adidas" in store_lower:
-        return f"https://www.adidas.com/us/search?q={encoded_q}"
-    elif "apple" in store_lower:
-        return f"https://www.apple.com/us/search/{encoded_q}"
-    elif "junaid" in store_lower or "j." in store_lower:
-        return f"https://www.junaidjamshed.com/catalogsearch/result/?q={encoded_q}"
-    elif "khaadi" in store_lower:
-        return f"https://pk.khaadi.com/search/?q={encoded_q}"
-    elif "outfitters" in store_lower:
-        return f"https://outfitters.com.pk/search?q={encoded_q}"
-    elif "asos" in store_lower:
-        return f"https://www.asos.com/search/?q={encoded_q}"
-    elif "nordstrom" in store_lower:
-        return f"https://www.nordstrom.com/sr?origin=keywordsearch&keyword={encoded_q}"
-    else:
-        if "." in store_lower and not any(ch in store_lower for ch in [" ", "/"]):
-            return f"https://www.{store_lower}/search?q={encoded_q}"
-        return f"https://www.amazon.com/s?k={encoded_q}"
+    elif "." in store_lower and not any(ch in store_lower for ch in [" ", "/"]):
+        return f"https://www.{store_lower}/search?q={encoded_q}"
+    return f"https://www.amazon.com/s?k={encoded_q}"
+
+
+def is_search_or_category_url(url_str):
+    """
+    Determines if a URL is a search results page, category listing, catalog search,
+    or generic store homepage rather than a specific direct product page.
+    """
+    if not url_str or not isinstance(url_str, str):
+        return True
+    try:
+        parsed = urllib.parse.urlparse(url_str.strip())
+        path_lower = (parsed.path or "").lower()
+        qs = urllib.parse.parse_qs(parsed.query)
+
+        # 1. Search query parameters
+        search_params = {
+            "q", "k", "keyword", "keywords", "searchterm", "search_term",
+            "query", "search_query", "search", "search_key", "searchtext",
+            "_nkw", "st", "field-keywords", "originkeyword", "nkw"
+        }
+        for param in qs:
+            if param.lower() in search_params:
+                return True
+
+        # 2. Search path segments
+        search_path_indicators = [
+            "/search", "/search/", "/searchpage", "/sr", "/pdsearch",
+            "/catalogsearch", "/wholesale", "/shop/featured",
+            "/catalog/search", "/find/"
+        ]
+        for indicator in search_path_indicators:
+            if indicator in path_lower:
+                return True
+
+        # Check for /s/ or /s? or /s
+        if path_lower.startswith("/s/") or path_lower == "/s" or "/s?" in url_str.lower():
+            return True
+
+        # 3. Category / Catalog listing without item identifier
+        category_indicators = ["/category/", "/categories/", "/dept/", "/browse/"]
+        for cat_ind in category_indicators:
+            if cat_ind in path_lower:
+                if not any(prod_ind in path_lower for prod_ind in ["/p/", "/product", "/item", ".html", "/ip/", "/dp/"]):
+                    return True
+
+        # 4. Generic homepage / root path (e.g. https://www.amazon.com or https://www.walmart.com/)
+        clean_path = path_lower.strip("/")
+        if clean_path in ("", "us", "en", "pk", "index.html", "index.php", "home"):
+            return True
+
+        return False
+    except Exception:
+        return True
+
+
+def extract_domain_tokens(url_or_domain):
+    """
+    Extracts core brand/domain tokens from a URL or domain string.
+    e.g. 'https://www.modaoperandi.com/product/123' -> {'modaoperandi', 'moda', 'operandi'}
+    """
+    if not url_or_domain or not isinstance(url_or_domain, str):
+        return set()
+    try:
+        if "://" in url_or_domain:
+            host = urllib.parse.urlparse(url_or_domain).netloc.lower()
+        else:
+            host = url_or_domain.lower()
+        
+        # Strip port
+        if ":" in host:
+            host = host.split(":")[0]
+            
+        # Strip www.
+        if host.startswith("www."):
+            host = host[4:]
+            
+        # Strip common TLDs (.com, .pk, .co.uk, .org, .net, etc.)
+        tld_patterns = [
+            r"\.com\.pk$", r"\.co\.uk$", r"\.com$", r"\.pk$", r"\.net$", r"\.org$",
+            r"\.io$", r"\.store$", r"\.shop$", r"\.de$", r"\.ca$", r"\.us$", r"\.info$"
+        ]
+        for pat in tld_patterns:
+            host = re.sub(pat, "", host)
+            
+        # Clean special chars
+        clean_host = re.sub(r"[^a-z0-9]", "", host)
+        tokens = {clean_host} if clean_host else set()
+        for part in re.split(r"[^a-z0-9]+", host):
+            if len(part) >= 3:
+                tokens.add(part)
+        return tokens
+    except Exception:
+        return set()
+
+
+def normalize_merchant_name(merchant_str):
+    """
+    Normalizes a merchant name into alphanumeric tokens for comparison.
+    e.g. 'Moda Operandi' -> 'modaoperandi', {'moda', 'operandi', 'modaoperandi'}
+    e.g. 'Sold by XYZ on Amazon' -> {'amazon', 'xyz', 'soldbyxyzonamazon'}
+    """
+    if not merchant_str or not isinstance(merchant_str, str):
+        return "", set()
+    m_clean = merchant_str.lower().strip()
+    
+    # Strip common corporate & generic store suffixes
+    suffixes = [
+        r"\b(inc|llc|ltd|co|corp|corporation)\b",
+        r"\b(official store|official|online store|online shop|store|shop|superstore)\b",
+        r"\b(usa|pk|uk|global|international)\b",
+        r"\.(com|pk|org|net)\b"
+    ]
+    for s_pat in suffixes:
+        m_clean = re.sub(s_pat, "", m_clean)
+        
+    m_clean = re.sub(r"[^a-z0-9\s]", " ", m_clean)
+    words = [w for w in m_clean.split() if len(w) >= 2]
+    combined = "".join(words)
+    token_set = set(words)
+    if combined:
+        token_set.add(combined)
+    return combined, token_set
+
+
+def match_merchant_to_url(merchant_name, url_str):
+    """
+    Validates that the destination URL actually belongs to the merchant shown on the card.
+    Prevents displaying Merchant A with a link to Merchant B.
+    """
+    if not merchant_name or not url_str:
+        return False
+    if is_google_domain(url_str):
+        # A Google domain (like google.com/shopping/product/...) is not a direct merchant URL
+        return False
+
+    domain_tokens = extract_domain_tokens(url_str)
+    combined_merchant, merchant_tokens = normalize_merchant_name(merchant_name)
+    
+    if not domain_tokens or not merchant_tokens:
+        return False
+
+    # Check for direct overlap
+    for d_tok in domain_tokens:
+        if d_tok in merchant_tokens:
+            return True
+        if combined_merchant and (d_tok in combined_merchant or combined_merchant in d_tok):
+            return True
+        for m_tok in merchant_tokens:
+            if m_tok in d_tok or d_tok in m_tok:
+                if len(m_tok) >= 3 and len(d_tok) >= 3:
+                    return True
+
+    # Marketplace handling: e.g. "Brand via Amazon" or "Seller on Walmart"
+    raw_lower = merchant_name.lower()
+    for market in ["amazon", "walmart", "ebay", "daraz", "target", "bestbuy", "flipkart", "aliexpress", "etsy"]:
+        if market in raw_lower and any(market in dt for dt in domain_tokens):
+            return True
+
+    return False
 
 
 def is_google_domain(url_str):
@@ -673,7 +781,14 @@ def extract_direct_retailer_url(item, source_store="", product_title=""):
     """
     Extract the authentic, direct official retailer product URL from a SerpAPI shopping result item.
     Inspects direct candidate fields and unpacks Google redirect URLs (such as /url?url= or /aclk?adurl=).
-    Strictly filters out any Google internal URLs (e.g. google.com/shopping/product/ or google.com/search).
+    Strictly filters out:
+    1. Google internal URLs (e.g. google.com/shopping/product/ or google.com/search)
+    2. Retailer search-result URLs (/search?q=..., /s?k=..., etc.)
+    3. Category, catalog, or generic homepage URLs
+    4. Merchant mismatches (e.g. Merchant A with URL to Merchant B)
+
+    Returns the verified direct retailer product URL, or None if unverified.
+    NEVER falls back to generating a retailer search URL or guessing a product URL.
     """
     if isinstance(item, str):
         item = {"link": item}
@@ -708,17 +823,100 @@ def extract_direct_retailer_url(item, source_store="", product_title=""):
 
     # Process each candidate URL to extract the real retailer destination
     for candidate in candidates:
-        # A. If it's already a direct external retailer URL (not google.com)
-        if not is_google_domain(candidate):
-            return candidate
+        target_url = candidate
 
-        # B. If it's a Google redirect wrapper (/url?url=..., /aclk?adurl=...), unpack it
-        unpacked = unpack_google_redirect_url(candidate)
-        if unpacked and not is_google_domain(unpacked):
-            return unpacked
+        # A. If it's a Google redirect wrapper (/url?url=..., /aclk?adurl=...), unpack it
+        if is_google_domain(candidate):
+            unpacked = unpack_google_redirect_url(candidate)
+            if unpacked and not is_google_domain(unpacked):
+                target_url = unpacked
+            else:
+                # Still a Google URL (e.g. google.com/shopping/product/...), not a direct retailer URL
+                continue
 
-    # Fallback to direct official store page for that merchant so user never lands on Google
-    return get_direct_store_url(source_store, product_title)
+        # B. Reject any remaining Google domain URLs as direct retailer URLs
+        if is_google_domain(target_url):
+            continue
+
+        # C. Reject retailer search-result, category, and homepage URLs
+        if is_search_or_category_url(target_url):
+            logger.warning("Rejected shopping offer: search URL, not product URL")
+            continue
+
+        # D. Validate that destination URL matches the merchant
+        if source_store and not match_merchant_to_url(source_store, target_url):
+            logger.warning("Rejected shopping offer: merchant URL mismatch")
+            continue
+
+        # Validated direct retailer product URL!
+        return target_url
+
+    # NEVER fall back to get_direct_store_url or synthesize a retailer search query.
+    return None
+
+
+def validate_product_offer_identity(item, default_source="Online Store", default_title="Product Item"):
+    """
+    Validates that a shopping offer object represents the SAME product across:
+    Title + Image + Price + Merchant + External Product URL + Product Identifiers.
+
+    Returns a dict:
+    {
+        "is_valid": bool,
+        "identity_status": "verified" | "partially_verified" | "unverified",
+        "verified_link": str | None,
+        "is_direct_deal": bool,
+        "rejection_reasons": list[str]
+    }
+    """
+    if not isinstance(item, dict):
+        return {
+            "is_valid": False,
+            "identity_status": "unverified",
+            "verified_link": None,
+            "is_direct_deal": False,
+            "rejection_reasons": ["item_not_dict"]
+        }
+
+    raw_title = item.get("title")
+    title = str(raw_title if raw_title is not None else default_title).strip()
+    raw_source = item.get("source") or item.get("merchant")
+    source = str(raw_source if raw_source is not None else default_source).strip()
+
+    # Direct Retailer URL Extraction & Validation
+    direct_url = extract_direct_retailer_url(item, source_store=source, product_title=title)
+
+    if direct_url:
+        return {
+            "is_valid": True,
+            "identity_status": "verified",
+            "verified_link": direct_url,
+            "is_direct_deal": True,
+            "rejection_reasons": []
+        }
+
+    # Fallback check: Google Shopping verified product page
+    product_link = item.get("product_link")
+    if product_link and isinstance(product_link, str) and product_link.strip().startswith("http"):
+        clean_pl = product_link.strip()
+        if "google.com/shopping/product/" in clean_pl.lower():
+            return {
+                "is_valid": True,
+                "identity_status": "partially_verified",
+                "verified_link": clean_pl,
+                "is_direct_deal": False,
+                "rejection_reasons": ["direct_retailer_url_unavailable"]
+            }
+
+    # If neither direct retailer URL nor Google product page is verified
+    logger.warning("Rejected shopping offer: invalid/missing product URL")
+    return {
+        "is_valid": True,
+        "identity_status": "unverified",
+        "verified_link": None,
+        "is_direct_deal": False,
+        "rejection_reasons": ["invalid_or_missing_product_url"]
+    }
 
 
 def extract_item_image(item):
@@ -726,7 +924,11 @@ def extract_item_image(item):
     Extract the actual image URL directly from the SerpAPI shopping item.
     Checks all valid image fields returned by SerpAPI in strict order.
     Returns neutral placeholder if image is absent or invalid.
+    Strictly isolated: checks only fields belonging to THIS specific item.
+    Never performs a separate image search, never reuses an image from another item.
     """
+    if not isinstance(item, dict):
+        return NEUTRAL_PLACEHOLDER_IMAGE
     for key in ["thumbnail", "serpapi_thumbnail", "image", "product_image", "photo"]:
         val = item.get(key)
         if val and isinstance(val, str) and val.strip().startswith("http"):
@@ -820,11 +1022,19 @@ def _process_serpapi_results(serpapi_results, query, target_curr="Rs."):
         if not isinstance(item, dict):
             continue
 
-        title = item.get("title") or f"{query.title() if query else 'Product'} Item"
-        source = item.get("source") or item.get("merchant") or "Online Store"
+        # 1. Product Identity Validation
+        def_title = f"{query.title() if query else 'Product'} Item"
+        validation = validate_product_offer_identity(item, default_source="Online Store", default_title=def_title)
+        if not validation["is_valid"]:
+            continue
+
+        title = str(item.get("title") or f"{query.title() if query else 'Product'} Item").strip()
+        source = str(item.get("source") or item.get("merchant") or "Online Store").strip()
         
-        # Exact direct retailer URL strictly belonging to THIS result (Bypasses Google Shopping)
-        link = extract_direct_retailer_url(item, source_store=source, product_title=title)
+        # Validated Link & Identity Status
+        link = validation["verified_link"]
+        identity_status = validation["identity_status"]
+        is_direct_deal = validation["is_direct_deal"]
         
         # Exact image belonging strictly to THIS specific SerpAPI result item
         image_url = extract_item_image(item)
@@ -939,13 +1149,17 @@ def _process_serpapi_results(serpapi_results, query, target_curr="Rs."):
         products.append({
             "title": title,
             "source": source,
+            "merchant": source,
             "price": format_converted_price(converted_val, target_curr),
             "price_val": converted_val,
             "original_price": format_converted_price(original_val, target_curr),
+            "currency": target_curr,
             "discount": f"{discount_pct}% OFF",
             "discount_val": discount_pct,
             "link": link,
+            "product_url": link,
             "thumbnail": image_url,
+            "image": image_url,
             "rating": rating,
             "reviews": reviews,
             "delivery": item.get("delivery") or f"Available on {source}",
@@ -963,6 +1177,11 @@ def _process_serpapi_results(serpapi_results, query, target_curr="Rs."):
             "shipping_str":   total_data["shipping_str"],
             "tax_amount":     total_data["tax_amount"],
             "tax_str":        total_data["tax_str"],
+            "product_id":     item.get("product_id"),
+            "sku":            item.get("sku") or item.get("merchant_product_id"),
+            "gtin":           item.get("gtin") or item.get("upc") or item.get("isbn"),
+            "identity_status": identity_status,
+            "is_direct_deal":  is_direct_deal,
         })
 
     return products

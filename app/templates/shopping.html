@@ -237,12 +237,20 @@
                 {% endif %}
             </div>
 
-            <!-- Thumbnail with Direct Store Link -->
-            <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer" class="deal-image-link" style="display: block; text-decoration: none;" title="Open on {{ item.source }}">
+            <!-- Thumbnail with Direct Store Link (Only if verified/partially verified link exists) -->
+            {% if item.link %}
+            <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer" class="deal-image-link" style="display: block; text-decoration: none;" title="{% if item.is_direct_deal %}Open product on {{ item.source }}{% else %}Compare product on Google Shopping{% endif %}">
                 <div class="deal-image-wrapper">
                     <img src="{{ item.thumbnail }}" alt="{{ item.title }}" loading="lazy" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'400\' viewBox=\'0 0 400 400\' fill=\'%231e293b\'><rect width=\'400\' height=\'400\' fill=\'%231e293b\'/><text x=\'50%\' y=\'45%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%2394a3b8\' font-size=\'44\' font-family=\'sans-serif\'>🛍️</text><text x=\'50%\' y=\'60%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%2394a3b8\' font-size=\'15\' font-family=\'sans-serif\' font-weight=\'600\'>Image Unavailable</text></svg>';">
                 </div>
             </a>
+            {% else %}
+            <div class="deal-image-link non-clickable-image" style="display: block; cursor: default;">
+                <div class="deal-image-wrapper">
+                    <img src="{{ item.thumbnail }}" alt="{{ item.title }}" loading="lazy" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'400\' viewBox=\'0 0 400 400\' fill=\'%231e293b\'><rect width=\'400\' height=\'400\' fill=\'%231e293b\'/><text x=\'50%\' y=\'45%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%2394a3b8\' font-size=\'44\' font-family=\'sans-serif\'>🛍️</text><text x=\'50%\' y=\'60%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%2394a3b8\' font-size=\'15\' font-family=\'sans-serif\' font-weight=\'600\'>Image Unavailable</text></svg>';">
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Content -->
             <div class="deal-details">
@@ -309,11 +317,23 @@
                     </div>
                 </div>
 
-                <!-- Direct Official Store External Link -->
-                <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer" class="btn-deal" title="Open product directly on {{ item.source }}">
+                <!-- Direct Official Store External Link or Safe State -->
+                {% if item.is_direct_deal and item.link %}
+                <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer" class="btn-deal" title="Open exact product directly on {{ item.source }}">
                     <span>View Deal on {{ item.source }}</span>
                     <i class="fas fa-arrow-up-right-from-square"></i>
                 </a>
+                {% elif item.identity_status == 'partially_verified' and item.link %}
+                <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer" class="btn-deal btn-deal-provider" title="Compare this offer on Google Shopping" style="background: rgba(99, 102, 241, 0.2); border: 1px solid rgba(99, 102, 241, 0.4); color: #c7d2fe;">
+                    <span>Compare on Google Shopping</span>
+                    <i class="fas fa-arrow-up-right-from-square"></i>
+                </a>
+                {% else %}
+                <button class="btn-deal btn-deal-disabled" disabled style="opacity: 0.6; cursor: not-allowed; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #94a3b8;" title="Direct retailer link unavailable for this product">
+                    <span>Direct Deal Unavailable</span>
+                    <i class="fas fa-link-slash"></i>
+                </button>
+                {% endif %}
             </div>
         </div>
         {% endfor %}
