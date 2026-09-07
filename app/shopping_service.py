@@ -5,8 +5,54 @@ import re
 import json
 import urllib.parse
 import difflib
+import logging
+
+logger = logging.getLogger(__name__)
 
 SERPAPI_URL = "https://serpapi.com/search.json"
+
+# ─── SEARCH OUTCOME & ERROR TAXONOMY (FEATURE #2) ──────────────────────────
+class SearchOutcome:
+    SUCCESS = "success"
+    NO_RESULTS = "no_results"
+    FILTERED_EMPTY = "filtered_empty"
+    TIMEOUT = "timeout"
+    NETWORK_ERROR = "network_error"
+    RATE_LIMITED = "rate_limited"
+    API_ERROR = "api_error"
+    INVALID_RESPONSE = "invalid_response"
+    INTERNAL_ERROR = "internal_error"
+
+
+class ShoppingSearchError(Exception):
+    """Base exception for shopping deal search issues."""
+    pass
+
+
+class ShoppingTimeoutError(ShoppingSearchError):
+    """Raised when upstream API request times out."""
+    pass
+
+
+class ShoppingNetworkError(ShoppingSearchError):
+    """Raised when network connection drops or fails."""
+    pass
+
+
+class ShoppingRateLimitError(ShoppingSearchError):
+    """Raised when upstream API rate limit or monthly search quota is reached."""
+    pass
+
+
+class ShoppingAPIError(ShoppingSearchError):
+    """Raised when upstream API reports an error (HTTP 4xx/5xx or invalid API key)."""
+    pass
+
+
+class ShoppingMalformedResponseError(ShoppingSearchError):
+    """Raised when API returns invalid or malformed data."""
+    pass
+
 
 # Neutral lightweight SVG placeholder for products without an image (no guessing, no random stock photos)
 NEUTRAL_PLACEHOLDER_IMAGE = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400' fill='%231e293b'><rect width='400' height='400' fill='%231e293b'/><text x='50%' y='45%' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-size='44' font-family='sans-serif'>🛍️</text><text x='50%' y='60%' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-size='15' font-family='sans-serif' font-weight='600'>Image Unavailable</text></svg>"
@@ -635,34 +681,89 @@ def _fetch_serpapi_shopping(query, num=60):
     """Call SerpAPI Google Shopping to get REAL live product results with their exact images"""
     api_key = Config.SERPAPI_API_KEY
     if not api_key:
-        return []
+        logger.error("SerpAPI search attempted without configured API key.")
+        raise ShoppingAPIError("SerpAPI API key is missing or not configured")
+
+    clean_q = clean_store_search_query(query)
+    params = {
+        "engine": "google_shopping",
+        "q": clean_q,
+        "api_key": api_key,
+        "num": num,
+        "hl": "en",
+    }
+    try:
+        resp = requests.get(SERPAPI_URL, params=params, timeout=12)
+    except requests.exceptions.Timeout as e:
+        logger.warning(f"SerpAPI request timed out for query '{clean_q}'.")
+        raise ShoppingTimeoutError(f"SerpAPI request timed out: {e}")
+    except (requests.exceptions.ConnectionError, requests.exceptions.RequestException) as e:
+        logger.warning(f"SerpAPI network error for query '{clean_q}'.")
+        raise ShoppingNetworkError(f"SerpAPI connection error: {e}")
+
+    # Inspect HTTP status code
+    if resp.status_code == 429:
+        logger.warning(f"SerpAPI HTTP 429 rate limit reached for query '{clean_q}'.")
+        raise ShoppingRateLimitError("SerpAPI rate limit or monthly quota reached (HTTP 429)")
+    elif resp.status_code in (401, 403):
+        logger.error(f"SerpAPI authentication error (HTTP {resp.status_code}).")
+        raise ShoppingAPIError(f"SerpAPI authentication failed (HTTP {resp.status_code})")
+    elif resp.status_code >= 500:
+        logger.error(f"SerpAPI upstream server error (HTTP {resp.status_code}).")
+        raise ShoppingAPIError(f"SerpAPI upstream server error (HTTP {resp.status_code})")
+    elif resp.status_code != 200:
+        logger.error(f"SerpAPI error (HTTP {resp.status_code}).")
+        raise ShoppingAPIError(f"SerpAPI returned HTTP {resp.status_code}")
 
     try:
-        clean_q = clean_store_search_query(query)
-        params = {
-            "engine": "google_shopping",
-            "q": clean_q,
-            "api_key": api_key,
-            "num": num,
-            "hl": "en",
-        }
-        resp = requests.get(SERPAPI_URL, params=params, timeout=12)
-        if resp.status_code == 200:
-            data = resp.json()
-            results = data.get("shopping_results") or data.get("inline_shopping_results") or []
-            if results:
-                return results[:num]
+        data = resp.json()
     except Exception as e:
-        print(f"SerpAPI Shopping error: {e}")
+        logger.error(f"Failed to parse SerpAPI JSON response: {e}")
+        raise ShoppingMalformedResponseError(f"Invalid JSON in SerpAPI response: {e}")
 
-    return []
+    if not isinstance(data, dict):
+        logger.error(f"SerpAPI returned non-dict response type: {type(data)}")
+        raise ShoppingMalformedResponseError(f"Expected dict response from SerpAPI, got {type(data).__name__}")
+
+    # Check for error payload from SerpAPI
+    if "error" in data:
+        err_msg = str(data.get("error") or "").lower()
+        logger.warning(f"SerpAPI returned error message: {data.get('error')}")
+        if any(term in err_msg for term in ["rate limit", "quota", "monthly search limit", "exhausted", "too many requests", "run out of searches", "has reached"]):
+            raise ShoppingRateLimitError("API rate limit or monthly search quota exhausted")
+        raise ShoppingAPIError("SerpAPI returned an error")
+
+    if isinstance(data.get("search_metadata"), dict) and data["search_metadata"].get("status") == "Error":
+        logger.error("SerpAPI search_metadata status is Error.")
+        raise ShoppingAPIError("SerpAPI search metadata reported an error")
+
+    # Extract shopping results safely
+    results = data.get("shopping_results")
+    if results is None:
+        results = data.get("inline_shopping_results")
+
+    if results is None:
+        # Search executed cleanly, but no shopping results found
+        return []
+
+    if not isinstance(results, list):
+        logger.error(f"Expected shopping_results to be a list, got {type(results).__name__}")
+        raise ShoppingMalformedResponseError(f"Expected shopping_results to be a list, got {type(results).__name__}")
+
+    return results[:num]
 
 
 def _process_serpapi_results(serpapi_results, query, target_curr="Rs."):
     """Process raw SerpAPI results into structured products preserving 1-to-1 data integrity"""
+    if not isinstance(serpapi_results, list):
+        return []
+
     products = []
     for idx, item in enumerate(serpapi_results):
-        title = item.get("title", f"{query.title()} Product")
+        if not isinstance(item, dict):
+            continue
+
+        title = item.get("title") or f"{query.title() if query else 'Product'} Item"
         source = item.get("source") or item.get("merchant") or "Online Store"
         
         # Exact direct retailer URL strictly belonging to THIS result (Bypasses Google Shopping)
@@ -671,8 +772,15 @@ def _process_serpapi_results(serpapi_results, query, target_curr="Rs."):
         # Exact image belonging strictly to THIS specific SerpAPI result item
         image_url = extract_item_image(item)
 
-        rating = float(item.get("rating") or 4.5)
-        reviews = int(item.get("reviews") or 150)
+        try:
+            rating = float(item.get("rating") or 4.5)
+        except (ValueError, TypeError):
+            rating = 4.5
+
+        try:
+            reviews = int(item.get("reviews") or 150)
+        except (ValueError, TypeError):
+            reviews = 150
 
         # Parse and convert price
         price_str = str(item.get("price") or item.get("extracted_price") or "")
@@ -911,13 +1019,13 @@ def filter_products(products, min_price=None, max_price=None,
 
 
 def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
-
     """
     Unified Live Shopping Search with Intelligent Query Normalization & Multi-Attempt Fallback.
     - Attempt 1: Search using the user's original query.
     - Attempt 2: If 0 results, search using the intelligently corrected / normalized query.
     - Attempt 3: If still 0 results and query is compound, search with simplified core keywords.
     Max 3 controlled attempts total to prevent excessive API calls.
+    Returns normalized structured result with status, success, products, user_message, retryable.
     """
     raw_query = (query or "").strip()
     if not raw_query:
@@ -950,8 +1058,94 @@ def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
 
     # Execute search with hard limit of maximum 3 attempts
     for attempt_idx, search_q in enumerate(attempts[:3]):
-        raw_results = _fetch_serpapi_shopping(search_q, num=60)
-        if raw_results:
+        try:
+            raw_results = _fetch_serpapi_shopping(search_q, num=60)
+        except (ShoppingTimeoutError, requests.exceptions.Timeout) as e:
+            logger.warning(f"Timeout searching for '{search_q}': {e}")
+            return {
+                "success": False,
+                "status": SearchOutcome.TIMEOUT,
+                "error_type": SearchOutcome.TIMEOUT,
+                "user_message": "Unable to connect to the live deals service right now. Please check your connection and try again.",
+                "retryable": True,
+                "source_type": "Live Shopping Deals",
+                "query": raw_query,
+                "corrected_query": None,
+                "total_results": 0,
+                "products": []
+            }
+        except (ShoppingNetworkError, requests.exceptions.ConnectionError) as e:
+            logger.warning(f"Network error searching for '{search_q}': {e}")
+            return {
+                "success": False,
+                "status": SearchOutcome.NETWORK_ERROR,
+                "error_type": SearchOutcome.NETWORK_ERROR,
+                "user_message": "Unable to connect to the live deals service right now. Please check your connection and try again.",
+                "retryable": True,
+                "source_type": "Live Shopping Deals",
+                "query": raw_query,
+                "corrected_query": None,
+                "total_results": 0,
+                "products": []
+            }
+        except ShoppingRateLimitError as e:
+            logger.warning(f"Rate limit error searching for '{search_q}': {e}")
+            return {
+                "success": False,
+                "status": SearchOutcome.RATE_LIMITED,
+                "error_type": SearchOutcome.RATE_LIMITED,
+                "user_message": "Live deal searches are temporarily busy. Please wait a moment and try again.",
+                "retryable": True,
+                "source_type": "Live Shopping Deals",
+                "query": raw_query,
+                "corrected_query": None,
+                "total_results": 0,
+                "products": []
+            }
+        except ShoppingMalformedResponseError as e:
+            logger.error(f"Malformed response searching for '{search_q}': {e}")
+            return {
+                "success": False,
+                "status": SearchOutcome.INVALID_RESPONSE,
+                "error_type": SearchOutcome.INVALID_RESPONSE,
+                "user_message": "We received an unexpected response while searching for deals. Please try again.",
+                "retryable": True,
+                "source_type": "Live Shopping Deals",
+                "query": raw_query,
+                "corrected_query": None,
+                "total_results": 0,
+                "products": []
+            }
+        except (ShoppingAPIError, requests.exceptions.RequestException) as e:
+            logger.error(f"API error searching for '{search_q}': {e}")
+            return {
+                "success": False,
+                "status": SearchOutcome.API_ERROR,
+                "error_type": SearchOutcome.API_ERROR,
+                "user_message": "We couldn't fetch live deals right now. Please try again.",
+                "retryable": True,
+                "source_type": "Live Shopping Deals",
+                "query": raw_query,
+                "corrected_query": None,
+                "total_results": 0,
+                "products": []
+            }
+        except Exception as e:
+            logger.error(f"Unexpected search error for '{search_q}': {e}", exc_info=True)
+            return {
+                "success": False,
+                "status": SearchOutcome.INTERNAL_ERROR,
+                "error_type": SearchOutcome.INTERNAL_ERROR,
+                "user_message": "An unexpected error occurred while searching for deals. Please try again.",
+                "retryable": True,
+                "source_type": "Live Shopping Deals",
+                "query": raw_query,
+                "corrected_query": None,
+                "total_results": 0,
+                "products": []
+            }
+
+        if raw_results and isinstance(raw_results, list):
             successful_query = search_q
             if attempt_idx > 0:
                 was_corrected = True
@@ -964,7 +1158,11 @@ def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
         calculate_deal_scores(final_products)
         apply_sorting_and_badges(final_products, sort_by)
         return {
-            "status": "success",
+            "success": True,
+            "status": SearchOutcome.SUCCESS,
+            "error_type": None,
+            "user_message": None,
+            "retryable": False,
             "source_type": "🔴 Live Direct Store Deals & Verified Prices",
             "query": raw_query,
             "corrected_query": successful_query if was_corrected else None,
@@ -974,7 +1172,11 @@ def search_shopping_deals(query, sort_by="price_low", currency="Rs."):
 
     # If truly 0 results across all attempts, return safe empty response
     return {
-        "status": "success",
+        "success": False,
+        "status": SearchOutcome.NO_RESULTS,
+        "error_type": SearchOutcome.NO_RESULTS,
+        "user_message": f'No live offers found for "{raw_query}".',
+        "retryable": False,
         "source_type": "Live Shopping Deals",
         "query": raw_query,
         "corrected_query": None,

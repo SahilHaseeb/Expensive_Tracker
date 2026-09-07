@@ -51,6 +51,7 @@
     </div>
 
     <!-- ═══ ADVANCED FILTERS PANEL ════════════════════════════════════════════ -->
+    {% if results.status == 'success' and results.products %}
     <div class="adv-filters-panel glass" id="advFiltersPanel">
 
         <!-- Panel header row -->
@@ -150,8 +151,10 @@
 
         </div><!-- /adv-filters-body -->
     </div><!-- /adv-filters-panel -->
+    {% endif %}
 
     <!-- Results Information Bar -->
+    {% if results.status == 'success' and results.products %}
     <div class="results-bar">
         <div class="results-count">
             <i class="fas fa-layer-group"></i>
@@ -183,9 +186,10 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
     <!-- Query Correction Notice (Transparent & Helpful) -->
-    {% if results.corrected_query and results.corrected_query|lower != current_query|lower %}
+    {% if results.corrected_query and results.corrected_query|lower != current_query|lower and results.status == 'success' and results.products %}
     <div class="query-correction-notice" style="margin: 10px 0 16px; padding: 10px 18px; background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.35); border-radius: 12px; font-size: 13px; color: #cbd5e1; display: flex; align-items: center; gap: 8px;">
         <i class="fas fa-circle-check" style="color: #818cf8; font-size: 14px;"></i>
         <span>Showing relevant live offers for <strong style="color: #ffffff;">"{{ results.corrected_query }}"</strong></span>
@@ -194,6 +198,7 @@
 
     <!-- Product Deal Cards Grid -->
     <div class="deals-grid" id="dealsGrid">
+        {% if results.status == 'success' and results.products %}
         {% for item in results.products %}
         <div class="deal-card glass card-hover deal-item-card {% if loop.index > 24 %}hidden-deal-card{% endif %} {% if item.is_best_deal %}best-deal-card{% elif item.is_best_price %}best-price-card{% elif item.is_premium %}premium-card{% elif item.is_top_rated %}top-rated-card{% endif %}"
              data-store="{{ item.source }}"
@@ -308,16 +313,80 @@
                 </a>
             </div>
         </div>
-        {% else %}
-        <div class="no-deals-card glass" style="text-align: center; padding: 50px 20px; grid-column: 1 / -1;">
-            <i class="fas fa-box-open" style="font-size: 52px; color: #818cf8; margin-bottom: 18px; display: block;"></i>
-            <h3 style="font-size: 20px; margin-bottom: 10px; color: #f8fafc;">No live products found for "{{ current_query }}"</h3>
-            <p style="color: #94a3b8; font-size: 14px;">Try searching for another product name or check your search spelling (e.g. perfume, laptop, shoes, smartphone, watch, headphones).</p>
-        </div>
         {% endfor %}
+        {% elif results.status == 'no_results' or (not results.products and results.status == 'success') %}
+        <!-- State B & C: Genuine Zero Results -->
+        <div class="no-deals-card glass" id="noResultsState" style="text-align: center; padding: 50px 24px; grid-column: 1 / -1;">
+            <div style="width: 72px; height: 72px; margin: 0 auto 20px; border-radius: 50%; background: rgba(99, 102, 241, 0.15); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 25px rgba(99, 102, 241, 0.25);">
+                <i class="fas fa-box-open" style="font-size: 32px; color: #818cf8;"></i>
+            </div>
+            <h3 style="font-size: 22px; margin-bottom: 12px; color: #f8fafc; font-weight: 700;">
+                No live offers found for "<span style="color: #818cf8;">{{ current_query }}</span>"
+            </h3>
+            <p style="color: #94a3b8; font-size: 14.5px; max-width: 520px; margin: 0 auto 24px; line-height: 1.6;">
+                We couldn't find any live retailer deals matching your query.
+            </p>
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 18px 24px; max-width: 460px; margin: 0 auto; text-align: left;">
+                <div style="font-size: 13px; font-weight: 600; color: #cbd5e1; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-lightbulb text-warning"></i> Try:
+                </div>
+                <ul style="color: #94a3b8; font-size: 13px; margin: 0; padding-left: 20px; line-height: 1.8;">
+                    <li>Checking the spelling</li>
+                    <li>Searching with fewer words</li>
+                    <li>Using a product or brand name</li>
+                    <li>Trying a related product</li>
+                </ul>
+            </div>
+        </div>
+        {% elif results.status in ['timeout', 'network_error'] %}
+        <!-- State F: Timeout / Network Error -->
+        <div class="no-deals-card glass deal-error-card" id="connectionErrorState" style="text-align: center; padding: 50px 24px; grid-column: 1 / -1; border: 1px solid rgba(239, 68, 68, 0.3);">
+            <div style="width: 72px; height: 72px; margin: 0 auto 20px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 25px rgba(239, 68, 68, 0.25);">
+                <i class="fas fa-wifi" style="font-size: 30px; color: #f87171;"></i>
+            </div>
+            <h3 style="font-size: 22px; margin-bottom: 12px; color: #f8fafc; font-weight: 700;">Connection Issue</h3>
+            <p style="color: #cbd5e1; font-size: 14.5px; max-width: 520px; margin: 0 auto 24px; line-height: 1.6;">
+                {{ results.user_message or "Unable to connect to the live deals service right now. Please check your connection and try again." }}
+            </p>
+            <a href="{{ url_for('shopping.index', q=current_query, sort=current_sort) }}" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 32px; border-radius: 50px; text-decoration: none; font-weight: 600;">
+                <i class="fas fa-rotate-right"></i> Try Again
+            </a>
+        </div>
+        {% elif results.status == 'rate_limited' %}
+        <!-- State G: Rate Limit / Quota Error -->
+        <div class="no-deals-card glass deal-error-card" id="rateLimitErrorState" style="text-align: center; padding: 50px 24px; grid-column: 1 / -1; border: 1px solid rgba(245, 158, 11, 0.3);">
+            <div style="width: 72px; height: 72px; margin: 0 auto 20px; border-radius: 50%; background: rgba(245, 158, 11, 0.15); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 25px rgba(245, 158, 11, 0.25);">
+                <i class="fas fa-hourglass-half" style="font-size: 30px; color: #fbbf24;"></i>
+            </div>
+            <h3 style="font-size: 22px; margin-bottom: 12px; color: #f8fafc; font-weight: 700;">Service Temporarily Busy</h3>
+            <p style="color: #cbd5e1; font-size: 14.5px; max-width: 520px; margin: 0 auto 24px; line-height: 1.6;">
+                {{ results.user_message or "Live deal searches are temporarily busy. Please wait a moment and try again." }}
+            </p>
+            <a href="{{ url_for('shopping.index', q=current_query, sort=current_sort) }}" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 32px; border-radius: 50px; text-decoration: none; font-weight: 600;">
+                <i class="fas fa-rotate-right"></i> Try Again
+            </a>
+        </div>
+        {% else %}
+        <!-- State E, H, I: API Error / Malformed / Internal Error -->
+        <div class="no-deals-card glass deal-error-card" id="apiErrorState" style="text-align: center; padding: 50px 24px; grid-column: 1 / -1; border: 1px solid rgba(239, 68, 68, 0.3);">
+            <div style="width: 72px; height: 72px; margin: 0 auto 20px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 25px rgba(239, 68, 68, 0.25);">
+                <i class="fas fa-triangle-exclamation" style="font-size: 30px; color: #f87171;"></i>
+            </div>
+            <h3 style="font-size: 22px; margin-bottom: 12px; color: #f8fafc; font-weight: 700;">We Couldn't Fetch Deals</h3>
+            <p style="color: #cbd5e1; font-size: 14.5px; max-width: 520px; margin: 0 auto 24px; line-height: 1.6;">
+                {{ results.user_message or "We couldn't fetch live deals right now. Please try again." }}
+            </p>
+            <a href="{{ url_for('shopping.index', q=current_query, sort=current_sort) }}" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 32px; border-radius: 50px; text-decoration: none; font-weight: 600;">
+                <i class="fas fa-rotate-right"></i> Try Again
+            </a>
+        </div>
+        {% endif %}
+
         <!-- Empty-filter state (shown by JS when filters remove all results) -->
         <div class="no-deals-card glass" id="emptyFilterState" style="display:none; text-align:center; padding:50px 20px; grid-column:1/-1;">
-            <i class="fas fa-filter-circle-xmark" style="font-size:52px;color:#818cf8;margin-bottom:18px;display:block;"></i>
+            <div style="width: 72px; height: 72px; margin: 0 auto 20px; border-radius: 50%; background: rgba(99, 102, 241, 0.15); display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-filter-circle-xmark" style="font-size:32px;color:#818cf8;"></i>
+            </div>
             <h3 style="font-size:20px;margin-bottom:10px;color:#f8fafc;">No products match your selected filters.</h3>
             <p style="color:#94a3b8;font-size:14px;">Try relaxing a filter or click <strong>Reset Filters</strong> to restore all results.</p>
             <button onclick="resetAllFilters()" class="btn-primary" style="margin-top:16px;padding:10px 28px;font-size:14px;border-radius:50px;"><i class="fas fa-rotate-left"></i> Reset Filters</button>
@@ -325,7 +394,7 @@
     </div>
 
     <!-- Load More Deals Button Section -->
-    {% if results.products|length > 24 %}
+    {% if results.status == 'success' and results.products|length > 24 %}
     <div class="load-more-container" id="loadMoreContainer" style="text-align: center; margin: 35px 0 20px;">
         <button type="button" class="btn-primary" id="loadMoreBtn" onclick="loadMoreDeals()" style="padding: 14px 36px; font-size: 15px; border-radius: 50px; box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4); display: inline-flex; align-items: center; gap: 10px;">
             <i class="fas fa-angles-down"></i> Load More Deals (<span id="remainingDealsCount">{{ results.products|length - 24 }}</span> more)
