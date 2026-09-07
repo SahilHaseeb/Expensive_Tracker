@@ -16,10 +16,10 @@
         </div>
 
         <!-- Search Form -->
-        <form method="GET" action="{{ url_for('shopping.index') }}" class="shopping-search-form">
+        <form method="GET" action="{{ url_for('shopping.index') }}" class="shopping-search-form" id="shoppingSearchForm">
             <div class="search-input-group">
                 <i class="fas fa-magnifying-glass search-icon"></i>
-                <input type="text" name="q" value="{{ current_query }}" placeholder="Search products, clothes, makeup, gadgets, shoes, electronics (e.g. Makeup kit, iPhone 15, Designer clothes)..." required autocomplete="off">
+                <input type="text" name="q" id="searchInput" value="{{ current_query }}" placeholder="Search products, clothes, makeup, gadgets, shoes, electronics (e.g. Makeup kit, iPhone 15, Designer clothes)..." required autocomplete="off">
                 <select name="sort" id="searchSortSelect" class="sort-select" onchange="onSortChange(this.value)">
                     <option value="relevance" {% if current_sort == 'relevance' or not current_sort %}selected{% endif %}>Relevance</option>
                     <option value="deal_score_high" {% if current_sort == 'deal_score_high' or current_sort == 'deal_score' %}selected{% endif %}>Deal Score: High → Low</option>
@@ -30,11 +30,14 @@
                     <option value="best_deal" {% if current_sort == 'best_deal' %}selected{% endif %}>Best Deal First</option>
                     {% if current_sort == 'rating' %}<option value="rating" selected>Highest Rated</option>{% endif %}
                 </select>
-                <button type="submit" class="btn-primary">
-                    <i class="fas fa-bolt"></i> Search Deals
+                <button type="submit" class="btn-primary" id="searchSubmitBtn" aria-label="Search Deals">
+                    <i class="fas fa-bolt" id="searchBtnIcon"></i> <span id="searchBtnText">Search Deals</span>
                 </button>
             </div>
         </form>
+
+        <!-- Screen reader live announcement for accessibility (Feature #3) -->
+        <div id="searchLiveAnnouncer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
         <!-- Quick Search Filter Pills -->
         <div class="quick-category-pills">
@@ -348,7 +351,7 @@
             <p style="color: #cbd5e1; font-size: 14.5px; max-width: 520px; margin: 0 auto 24px; line-height: 1.6;">
                 {{ results.user_message or "Unable to connect to the live deals service right now. Please check your connection and try again." }}
             </p>
-            <a href="{{ url_for('shopping.index', q=current_query, sort=current_sort) }}" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 32px; border-radius: 50px; text-decoration: none; font-weight: 600;">
+            <a href="{{ url_for('shopping.index', q=current_query, sort=current_sort) }}" onclick="retryCurrentSearch(); return false;" class="btn-primary retry-deal-btn" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 32px; border-radius: 50px; text-decoration: none; font-weight: 600;">
                 <i class="fas fa-rotate-right"></i> Try Again
             </a>
         </div>
@@ -362,7 +365,7 @@
             <p style="color: #cbd5e1; font-size: 14.5px; max-width: 520px; margin: 0 auto 24px; line-height: 1.6;">
                 {{ results.user_message or "Live deal searches are temporarily busy. Please wait a moment and try again." }}
             </p>
-            <a href="{{ url_for('shopping.index', q=current_query, sort=current_sort) }}" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 32px; border-radius: 50px; text-decoration: none; font-weight: 600;">
+            <a href="{{ url_for('shopping.index', q=current_query, sort=current_sort) }}" onclick="retryCurrentSearch(); return false;" class="btn-primary retry-deal-btn" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 32px; border-radius: 50px; text-decoration: none; font-weight: 600;">
                 <i class="fas fa-rotate-right"></i> Try Again
             </a>
         </div>
@@ -376,7 +379,7 @@
             <p style="color: #cbd5e1; font-size: 14.5px; max-width: 520px; margin: 0 auto 24px; line-height: 1.6;">
                 {{ results.user_message or "We couldn't fetch live deals right now. Please try again." }}
             </p>
-            <a href="{{ url_for('shopping.index', q=current_query, sort=current_sort) }}" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 32px; border-radius: 50px; text-decoration: none; font-weight: 600;">
+            <a href="{{ url_for('shopping.index', q=current_query, sort=current_sort) }}" onclick="retryCurrentSearch(); return false;" class="btn-primary retry-deal-btn" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 32px; border-radius: 50px; text-decoration: none; font-weight: 600;">
                 <i class="fas fa-rotate-right"></i> Try Again
             </a>
         </div>
@@ -404,6 +407,48 @@
 </div>
 
 <style>
+/* ─── SKELETON LOADING & SHIMMER (FEATURE #3) ─────────────────────────── */
+.search-loading-banner {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.deal-skeleton-card {
+    background: rgba(30, 41, 59, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 420px;
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-shimmer {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(255, 255, 255, 0.12) 50%, rgba(255, 255, 255, 0.03) 75%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s infinite;
+    border-radius: 10px;
+}
+
+@keyframes skeletonShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.skeleton-image {
+    width: 100%;
+    height: 190px;
+    border-radius: 14px;
+}
+
+.btn-primary:disabled {
+    opacity: 0.75;
+    cursor: not-allowed;
+    filter: grayscale(20%);
+}
+
 /* ─── ADVANCED FILTERS PANEL ────────────────────────────────────────────── */
 .adv-filters-panel {
     margin: 16px 0;
@@ -1136,6 +1181,121 @@ function loadMoreDeals() {
     updateDealsVisibility();
 }
 
+/* ─── SEARCH LIFECYCLE & LOADING STATE MANAGEMENT (FEATURE #3) ──────────── */
+const SearchState = {
+    IDLE: 'idle',
+    LOADING: 'loading',
+    SUCCESS: 'success',
+    EMPTY: 'empty',
+    ERROR: 'error'
+};
+
+let currentSearchState = SearchState.IDLE;
+let isSearching = false;
+
+function renderSkeletonGrid(count = 8) {
+    let cards = '';
+    for (let i = 0; i < count; i++) {
+        cards += `
+        <div class="deal-skeleton-card glass" aria-hidden="true">
+            <div class="skeleton-image skeleton-shimmer"></div>
+            <div class="skeleton-shimmer" style="width: 35%; height: 16px; border-radius: 6px;"></div>
+            <div class="skeleton-shimmer" style="width: 88%; height: 20px; margin-top: 4px;"></div>
+            <div class="skeleton-shimmer" style="width: 55%; height: 14px;"></div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                <div class="skeleton-shimmer" style="width: 45%; height: 24px; border-radius: 6px;"></div>
+                <div class="skeleton-shimmer" style="width: 30%; height: 16px; border-radius: 6px;"></div>
+            </div>
+            <div class="skeleton-shimmer" style="width: 100%; height: 38px; border-radius: 10px; margin-top: 6px;"></div>
+            <div class="skeleton-shimmer" style="width: 100%; height: 42px; border-radius: 12px; margin-top: auto;"></div>
+        </div>`;
+    }
+    return `
+    <div class="search-loading-banner glass" style="text-align: center; padding: 22px 20px; grid-column: 1 / -1; margin-bottom: 8px; border-radius: 16px; border: 1px solid rgba(99, 102, 241, 0.35); background: rgba(99, 102, 241, 0.08);" role="status">
+        <div style="display: inline-flex; align-items: center; gap: 12px;">
+            <i class="fas fa-spinner fa-spin text-primary" style="font-size: 22px; color: #818cf8;"></i>
+            <span style="font-size: 16px; font-weight: 700; color: #f8fafc;">Searching live deals from 40+ stores...</span>
+        </div>
+        <p style="color: #94a3b8; font-size: 13.5px; margin: 6px 0 0;">Scanning verified prices, stock availability, and official discounts.</p>
+    </div>
+    ${cards}
+    `;
+}
+
+function startSearchLoading(queryText) {
+    if (isSearching) return false;
+    isSearching = true;
+    currentSearchState = SearchState.LOADING;
+
+    const q = (queryText || '').trim();
+
+    // 1. Disable submit button and show spinner
+    const btn = document.getElementById('searchSubmitBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.setAttribute('aria-busy', 'true');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Searching...</span>';
+    }
+
+    // 2. Screen reader live announcement
+    const announcer = document.getElementById('searchLiveAnnouncer');
+    if (announcer) {
+        announcer.textContent = `Searching live deals for "${q}"...`;
+    }
+
+    // 3. Results Area transition: show clean skeleton placeholders in dealsGrid
+    const grid = document.getElementById('dealsGrid');
+    if (grid) {
+        grid.setAttribute('aria-busy', 'true');
+        grid.innerHTML = renderSkeletonGrid();
+    }
+
+    // 4. Dim results bar and filters panel if present
+    const resBar = document.querySelector('.results-bar');
+    if (resBar) {
+        resBar.style.opacity = '0.5';
+        resBar.style.pointerEvents = 'none';
+    }
+    const filtersPanel = document.getElementById('advFiltersPanel');
+    if (filtersPanel) {
+        filtersPanel.style.opacity = '0.5';
+        filtersPanel.style.pointerEvents = 'none';
+    }
+
+    return true;
+}
+
+function stopSearchLoading() {
+    isSearching = false;
+    currentSearchState = SearchState.IDLE;
+
+    const btn = document.getElementById('searchSubmitBtn');
+    if (btn) {
+        btn.disabled = false;
+        btn.removeAttribute('aria-busy');
+        btn.innerHTML = '<i class="fas fa-bolt"></i> <span>Search Deals</span>';
+    }
+
+    const announcer = document.getElementById('searchLiveAnnouncer');
+    if (announcer) {
+        announcer.textContent = '';
+    }
+
+    const grid = document.getElementById('dealsGrid');
+    if (grid) {
+        grid.removeAttribute('aria-busy');
+    }
+}
+
+function retryCurrentSearch() {
+    if (isSearching) return false;
+    const input = document.getElementById('searchInput');
+    const q = (input ? input.value : '{{ current_query }}').trim();
+    startSearchLoading(q);
+    const sortVal = document.getElementById('searchSortSelect')?.value || '{{ current_sort }}' || 'relevance';
+    window.location.href = "{{ url_for('shopping.index') }}?q=" + encodeURIComponent(q) + "&sort=" + encodeURIComponent(sortVal);
+}
+
 /* ---------- init ---------- */
 document.addEventListener('DOMContentLoaded', function() {
     buildStoreCheckboxes();
@@ -1143,6 +1303,43 @@ document.addEventListener('DOMContentLoaded', function() {
         applySorting();
     }
     updateDealsVisibility();
+
+    // Attach search form submit listener
+    const searchForm = document.getElementById('shoppingSearchForm');
+    if (searchForm) {
+        searchForm.addEventListener('submit', function(e) {
+            const input = document.getElementById('searchInput');
+            const q = (input ? input.value : '').trim();
+            if (!q) {
+                e.preventDefault();
+                return false;
+            }
+            if (isSearching) {
+                // Prevent duplicate search while request is already running
+                e.preventDefault();
+                return false;
+            }
+            startSearchLoading(q);
+            // Allow form submission to proceed
+        });
+    }
+
+    // Attach quick category pills click listener
+    document.querySelectorAll('.category-pill').forEach(pill => {
+        pill.addEventListener('click', function(e) {
+            if (isSearching) {
+                e.preventDefault();
+                return false;
+            }
+            const pillText = this.textContent.trim();
+            startSearchLoading(pillText);
+        });
+    });
+});
+
+// Clean up loading state if restored from back-forward cache (bfcache)
+window.addEventListener('pageshow', function() {
+    stopSearchLoading();
 });
 </script>
 {% endblock %}

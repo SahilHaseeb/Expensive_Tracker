@@ -54,6 +54,63 @@ class ShoppingMalformedResponseError(ShoppingSearchError):
     pass
 
 
+# ─── SEARCH LIFECYCLE & REQUEST STATE MANAGEMENT (FEATURE #3) ──────────────
+class SearchState:
+    IDLE = "idle"
+    LOADING = "loading"
+    SUCCESS = "success"
+    EMPTY = "empty"
+    ERROR = "error"
+
+
+class SearchStateManager:
+    """
+    Lightweight request lifecycle manager to track search state,
+    prevent duplicate/overlapping submissions, and manage clean transitions.
+    """
+    def __init__(self):
+        self.state = SearchState.IDLE
+        self.current_query = None
+        self.request_id = 0
+
+    def start_search(self, query):
+        """
+        Transitions to LOADING state.
+        Rejects duplicate submission if another search is already running.
+        Returns (success: bool, info: int | str).
+        """
+        if self.state == SearchState.LOADING:
+            return False, "Search already in progress"
+        self.state = SearchState.LOADING
+        self.current_query = query
+        self.request_id += 1
+        return True, self.request_id
+
+    def complete_search(self, result, request_id=None):
+        """
+        Transitions from LOADING to SUCCESS, EMPTY, or ERROR based on search outcome.
+        Guards against race conditions if an older request finishes after a newer one.
+        """
+        if request_id is not None and request_id != self.request_id:
+            # Stale request response, drop to prevent race conditions
+            return False
+
+        total_count = result.get("total_results") if "total_results" in result else len(result.get("products", []))
+        if not result or result.get("status") == SearchOutcome.NO_RESULTS or (result.get("status") == SearchOutcome.SUCCESS and total_count == 0):
+            self.state = SearchState.EMPTY
+        elif result.get("status") == SearchOutcome.SUCCESS:
+            self.state = SearchState.SUCCESS
+        else:
+            self.state = SearchState.ERROR
+        return True
+
+    def reset(self):
+        """Resets state back to IDLE."""
+        self.state = SearchState.IDLE
+        self.current_query = None
+
+
+
 # Neutral lightweight SVG placeholder for products without an image (no guessing, no random stock photos)
 NEUTRAL_PLACEHOLDER_IMAGE = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400' fill='%231e293b'><rect width='400' height='400' fill='%231e293b'/><text x='50%' y='45%' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-size='44' font-family='sans-serif'>🛍️</text><text x='50%' y='60%' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-size='15' font-family='sans-serif' font-weight='600'>Image Unavailable</text></svg>"
 
