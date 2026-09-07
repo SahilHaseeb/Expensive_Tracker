@@ -19,23 +19,31 @@ const commonLayout = {
     }
 };
 
-// Responsive charts
+// Responsive charts — resize handler with guard
 window.addEventListener('resize', () => {
-    Plotly.Plots.resize('pie-chart');
-    Plotly.Plots.resize('line-chart');
+    const pieEl = document.getElementById('pie-chart');
+    const lineEl = document.getElementById('line-chart');
+    if (pieEl && typeof Plotly !== 'undefined') {
+        try { Plotly.Plots.resize(pieEl); } catch(e) {}
+    }
+    if (lineEl && typeof Plotly !== 'undefined') {
+        try { Plotly.Plots.resize(lineEl); } catch(e) {}
+    }
 });
 
-// Add hover effects to charts
-document.querySelectorAll('.chart-container').forEach(container => {
-    container.addEventListener('mouseenter', () => {
-        container.style.transform = 'scale(1.02)';
-        container.style.transition = 'transform 0.3s ease';
+// Add hover effects to charts (desktop only — skip on touch devices)
+if (window.matchMedia('(hover: hover)').matches) {
+    document.querySelectorAll('.chart-container').forEach(container => {
+        container.addEventListener('mouseenter', () => {
+            container.style.transform = 'scale(1.02)';
+            container.style.transition = 'transform 0.3s ease';
+        });
+        
+        container.addEventListener('mouseleave', () => {
+            container.style.transform = 'scale(1)';
+        });
     });
-    
-    container.addEventListener('mouseleave', () => {
-        container.style.transform = 'scale(1)';
-    });
-});
+}
 
 // Export chart as image
 function exportChart(chartId) {

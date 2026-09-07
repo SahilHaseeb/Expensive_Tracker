@@ -16,6 +16,7 @@
     <!-- Stylesheets -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/animations.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -49,6 +50,9 @@
     <button class="mobile-nav-toggle" id="mobileNavToggle" title="Open Navigation Menu">
         <i class="fas fa-bars"></i>
     </button>
+
+    <!-- Sidebar Overlay (Mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     <!-- Modern Sidebar Navigation -->
     <nav class="sidebar">
