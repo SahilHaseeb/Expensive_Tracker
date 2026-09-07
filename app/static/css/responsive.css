@@ -139,6 +139,11 @@ img, video, svg, canvas {
         grid-template-columns: 1fr;
     }
 
+    /* Dashboard insights grid single column */
+    .dashboard-insights-grid {
+        grid-template-columns: 1fr;
+    }
+
     /* Health gauge body: stack on smaller tablets */
     .health-gauge-body {
         flex-wrap: wrap;
@@ -715,6 +720,13 @@ img, video, svg, canvas {
         font-size: 11px;
     }
 
+    /* Overall budget labels wrap */
+    .overall-budget-labels {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
     /* Deal grid: still try 2 col if possible */
     .deals-grid {
         grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -860,6 +872,17 @@ img, video, svg, canvas {
 
     .stat-info small {
         font-size: 10.5px;
+    }
+
+    .stat-trend-badge {
+        font-size: 10px;
+        padding: 2px 6px;
+    }
+
+    .ai-insights-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
     }
 
     /* Deals grid: single column on small phones */
@@ -1194,6 +1217,16 @@ img, video, svg, canvas {
 
     .stat-info h2 {
         font-size: 16px;
+    }
+
+    .stat-trend-badge {
+        font-size: 9.5px;
+        padding: 2px 4px;
+    }
+
+    .command-btn {
+        padding: 6px 10px;
+        font-size: 12px;
     }
 
     /* Very tight deal cards */

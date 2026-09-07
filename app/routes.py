@@ -26,15 +26,28 @@ def dashboard():
     expenses = Expense.query.filter_by(user_id=current_user.id).order_by(Expense.date.desc()).all()
     user_currency = getattr(current_user, 'currency', None) or '₹'
 
-    # Statistics
+    # Current period statistics
     now = datetime.now()
     this_month = now.month
     this_year = now.year
+    month_name = now.strftime('%B %Y')
     
+    # Previous period for Month-over-Month comparison
+    prev_month = 12 if this_month == 1 else this_month - 1
+    prev_year = this_year - 1 if this_month == 1 else this_year
+
     monthly_expenses = [e for e in expenses if e.date.month == this_month and e.date.year == this_year]
+    prev_month_expenses = [e for e in expenses if e.date.month == prev_month and e.date.year == prev_year]
+
     total_this_month = round(sum(e.amount for e in monthly_expenses), 2)
+    total_prev_month = round(sum(e.amount for e in prev_month_expenses), 2)
+
+    # MoM Velocity
+    mom_change = round(total_this_month - total_prev_month, 2)
+    mom_pct = round((mom_change / total_prev_month * 100), 1) if total_prev_month > 0 else 0.0
+    has_prev_data = total_prev_month > 0
     
-    # Category totals for cards
+    # Category totals for cards and charts
     df = pd.DataFrame([(e.amount, e.category, e.date) for e in expenses], 
                       columns=['amount', 'category', 'date'])
     
@@ -153,20 +166,43 @@ def dashboard():
     # 1. Financial Health Score
     health_score = calculate_financial_health_score(current_user.id)
 
-    # 2. Category Budgets for Dashboard Widget
-    user_budgets = {b.category: b.monthly_limit for b in Budget.query.filter_by(user_id=current_user.id).all()}
+    # 2. Category Budgets & Overall Monthly Budget Overview
+    all_user_budgets = Budget.query.filter_by(user_id=current_user.id).all()
+    user_budgets = {b.category: float(b.monthly_limit) for b in all_user_budgets}
+    
+    total_budget = round(sum(b.monthly_limit for b in all_user_budgets), 2)
+    total_budget_spent = round(sum(category_totals.get(cat, 0.0) for cat in user_budgets), 2) if user_budgets else 0.0
+    total_budget_remaining = round(max(0.0, total_budget - total_budget_spent), 2) if total_budget > 0 else 0.0
+    total_budget_overage = round(max(0.0, total_budget_spent - total_budget), 2) if total_budget_spent > total_budget else 0.0
+    overall_budget_pct = round((total_budget_spent / total_budget * 100), 1) if total_budget > 0 else 0.0
+    is_overall_over = total_budget_spent > total_budget if total_budget > 0 else False
+    is_overall_warning = (0.75 * total_budget <= total_budget_spent <= total_budget) if total_budget > 0 else False
+
+    overall_budget_summary = {
+        "total_budget": total_budget,
+        "total_budget_spent": total_budget_spent,
+        "total_budget_remaining": total_budget_remaining,
+        "total_budget_overage": total_budget_overage,
+        "overall_budget_pct": overall_budget_pct,
+        "is_overall_over": is_overall_over,
+        "is_overall_warning": is_overall_warning,
+        "has_budgets": bool(all_user_budgets)
+    }
+
     budget_progress = []
     for cat, limit in user_budgets.items():
         spent = float(category_totals.get(cat, 0.0))
-        pct = round((spent / limit * 100), 1) if limit > 0 else 0
+        pct = round((spent / limit * 100), 1) if limit > 0 else 0.0
         budget_progress.append({
             "category": cat,
             "limit": limit,
             "spent": spent,
-            "percentage": min(100, pct),
-            "raw_percentage": pct,
+            "remaining": round(limit - spent, 2),
+            "percentage": min(100, int(round(pct))),
+            "raw_percentage": int(round(pct)),
             "is_over": spent > limit,
-            "is_warning": spent >= 0.75 * limit and spent <= limit
+            "is_warning": 0.75 * limit <= spent <= limit,
+            "is_healthy": spent < 0.75 * limit
         })
 
     # 3. Upcoming Bill Reminders (due in next 5 days)
@@ -183,20 +219,50 @@ def dashboard():
                 "days_left": days_left,
                 "is_urgent": days_left <= 2
             })
+
+    # 4. Verified Smart AI Insights Preview
+    smart_insights = []
+    try:
+        from app.ai_advisor import get_user_financial_context
+        financial_context = get_user_financial_context(current_user.id)
+        smart_insights = financial_context.get('smart_insights', [])[:3]
+    except Exception as e:
+        smart_insights = []
     
     return render_template('dashboard.html',
+                           month_name=month_name,
                            total_this_month=total_this_month,
+                           total_prev_month=total_prev_month,
+                           mom_change=mom_change,
+                           mom_pct=mom_pct,
+                           has_prev_data=has_prev_data,
                            transaction_count=transaction_count,
                            avg_transaction=avg_transaction,
+                           overall_budget_summary=overall_budget_summary,
+                           total_budget=total_budget,
+                           total_budget_spent=total_budget_spent,
+                           total_budget_remaining=total_budget_remaining,
+                           total_budget_overage=total_budget_overage,
+                           overall_budget_pct=overall_budget_pct,
+                           is_overall_over=is_overall_over,
+                           is_overall_warning=is_overall_warning,
+                           has_budgets=bool(all_user_budgets),
+                           total_spent=total_this_month,
+                           budget=total_budget,
+                           remaining_budget=total_budget_remaining,
+                           budget_percentage=overall_budget_pct,
                            category_totals=category_totals,
                            pie_chart_json=pie_chart_json,
                            line_chart_json=line_chart_json,
                            predicted=predicted,
                            health_score=health_score,
                            budget_progress=budget_progress,
+                           smart_insights=smart_insights,
                            upcoming_bills=upcoming_bills,
                            user_currency=user_currency,
-                           expenses=expenses[:10])
+                           expenses=expenses[:10],
+                           recent_expenses=expenses[:10],
+                           total_expenses_count=len(expenses))
 
 @main.route('/add', methods=['GET', 'POST'])
 @login_required

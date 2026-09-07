@@ -1,27 +1,63 @@
 {% extends "base.html" %}
-{% block title %}Dashboard - Smart Expense Tracker{% endblock %}
+{% block title %}Financial Dashboard - ExpenseAI{% endblock %}
 
 {% block content %}
 <div class="dashboard animate-fade-up">
-    <!-- Welcome Header -->
+    <!-- Welcome & Context Header -->
     <div class="welcome-section">
         <div>
             <h1>Financial Dashboard</h1>
-            <p>Welcome back, <strong>{{ current_user.username }}</strong>! Here is your spending intelligence.</p>
+            <p>Welcome back, <strong>{{ current_user.username }}</strong>! Here is your financial command center for <strong>{{ month_name }}</strong>.</p>
         </div>
         
         <div class="header-action-pills">
             {% if predicted %}
-            <div class="prediction-badge animate-pulse-glow">
+            <div class="prediction-badge animate-pulse-glow" title="Machine learning forecast based on previous spending patterns">
                 <i class="fas fa-brain"></i>
                 <div>
-                    <small>AI Prediction</small>
+                    <small>AI Forecast</small>
                     <strong>{{ user_currency }}{{ predicted }}</strong>
                     <span>Next Month</span>
                 </div>
             </div>
             {% endif %}
         </div>
+    </div>
+
+    <!-- Quick Actions Command Bar -->
+    <div class="dashboard-command-bar glass animate-fade-up">
+        <a href="{{ url_for('main.add_expense') }}" class="command-btn command-btn-primary" id="qaAddExpense" title="Record an expense manually">
+            <i class="fas fa-plus-circle"></i>
+            <span>Add Expense</span>
+        </a>
+        <a href="{{ url_for('main.add_expense') }}#receiptDropzone" class="command-btn" id="qaScanReceipt" title="Scan receipt with Gemini Vision OCR">
+            <i class="fas fa-camera"></i>
+            <span>Scan Receipt</span>
+        </a>
+        <button type="button" class="command-btn" id="dashboardVoiceBtn" title="Speak naturally to record an expense">
+            <i class="fas fa-microphone"></i>
+            <span>Voice Input</span>
+        </button>
+        <a href="{{ url_for('shopping.index') }}" class="command-btn" id="qaDealFinder" title="Search live verified deals & discounts">
+            <i class="fas fa-bag-shopping"></i>
+            <span>Smart Deals</span>
+        </a>
+        <a href="{{ url_for('features.budgets_page') }}" class="command-btn" id="qaBudgets" title="Set and adjust category spending limits">
+            <i class="fas fa-bullseye"></i>
+            <span>Budgets</span>
+        </a>
+        <a href="{{ url_for('features.subscriptions_page') }}" class="command-btn" id="qaSubscriptions" title="Track recurring bills & subscriptions">
+            <i class="fas fa-rotate"></i>
+            <span>Subscriptions</span>
+        </a>
+        <a href="{{ url_for('chatbot.index') }}" class="command-btn" id="qaAiAdvisor" title="Chat with your personal financial AI Advisor">
+            <i class="fas fa-brain"></i>
+            <span>AI Advisor</span>
+        </a>
+        <a href="{{ url_for('main.export_csv') }}" class="command-btn" id="qaExportCsv" title="Export monthly expenses to CSV">
+            <i class="fas fa-file-arrow-down"></i>
+            <span>Export CSV</span>
+        </a>
     </div>
 
     <!-- Upcoming Bills & Subscription Alert Banner (if due) -->
@@ -47,57 +83,238 @@
     </div>
     {% endif %}
 
-    <!-- 4 Key Stat Metric Cards + Financial Health Score Card -->
-    <div class="dashboard-top-grid">
-        <!-- 4 Metric Cards Grid -->
-        <div class="stats-grid">
-            <div class="stat-card glass card-hover delay-1">
-                <div class="stat-icon" style="background: linear-gradient(135deg, #6366F1, #8B5CF6);">
-                    <i class="fas fa-wallet"></i>
-                </div>
-                <div class="stat-info">
-                    <small>Total Spent This Month</small>
-                    <h2>{{ user_currency }}{{ total_this_month }}</h2>
-                </div>
+    <!-- SECTION A: TOP FINANCIAL SUMMARY (4 Primary KPI Cards) -->
+    <div class="stats-grid">
+        <!-- KPI 1: Total Spent This Month with MoM Trend -->
+        <div class="stat-card glass card-hover delay-1">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #6366F1, #8B5CF6);">
+                <i class="fas fa-wallet"></i>
             </div>
-            
-            <div class="stat-card glass card-hover delay-2">
-                <div class="stat-icon" style="background: linear-gradient(135deg, #EC4899, #F43F5E);">
-                    <i class="fas fa-receipt"></i>
-                </div>
-                <div class="stat-info">
-                    <small>Monthly Transactions</small>
-                    <h2>{{ transaction_count }}</h2>
-                </div>
-            </div>
-            
-            <div class="stat-card glass card-hover delay-3">
-                <div class="stat-icon" style="background: linear-gradient(135deg, #3B82F6, #06B6D4);">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-                <div class="stat-info">
-                    <small>Average Spend</small>
-                    <h2>{{ user_currency }}{{ avg_transaction }}</h2>
-                </div>
-            </div>
-            
-            <div class="stat-card glass card-hover delay-4">
-                <div class="stat-icon" style="background: linear-gradient(135deg, #10B981, #14B8A6);">
-                    <i class="fas fa-tags"></i>
-                </div>
-                <div class="stat-info">
-                    <small>Active Categories</small>
-                    <h2>{{ category_totals|length }}</h2>
+            <div class="stat-info">
+                <small>Spent in {{ month_name.split(' ')[0] }}</small>
+                <h2>{{ user_currency }}{{ total_this_month }}</h2>
+                <div class="stat-trend-container">
+                    {% if has_prev_data %}
+                        {% if mom_pct > 0 %}
+                        <span class="stat-trend-badge trend-up" title="Increased compared to last month">
+                            <i class="fas fa-arrow-trend-up"></i> +{{ mom_pct }}% vs last month
+                        </span>
+                        {% elif mom_pct < 0 %}
+                        <span class="stat-trend-badge trend-down" title="Decreased compared to last month">
+                            <i class="fas fa-arrow-trend-down"></i> {{ mom_pct }}% vs last month
+                        </span>
+                        {% else %}
+                        <span class="stat-trend-badge trend-flat" title="Same as last month">
+                            <i class="fas fa-minus"></i> 0% vs last month
+                        </span>
+                        {% endif %}
+                    {% else %}
+                    <span class="stat-trend-badge trend-neutral" title="First month of tracked spending">
+                        <i class="fas fa-calendar-check"></i> Current billing cycle
+                    </span>
+                    {% endif %}
                 </div>
             </div>
         </div>
 
-        <!-- Financial Health Score Card -->
+        <!-- KPI 2: Overall Budget Status -->
+        <div class="stat-card glass card-hover delay-2">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #10B981, #14B8A6);">
+                <i class="fas fa-bullseye"></i>
+            </div>
+            <div class="stat-info">
+                <small>Monthly Budget</small>
+                {% if overall_budget_summary.has_budgets %}
+                <h2>{{ user_currency }}{{ overall_budget_summary.total_budget }}</h2>
+                <div class="stat-trend-container">
+                    {% if overall_budget_summary.is_overall_over %}
+                    <span class="stat-trend-badge trend-danger" title="Total spending exceeded total budget">
+                        <i class="fas fa-triangle-exclamation"></i> Over by {{ user_currency }}{{ overall_budget_summary.total_budget_overage }}
+                    </span>
+                    {% elif overall_budget_summary.is_overall_warning %}
+                    <span class="stat-trend-badge trend-warning" title="Approaching budget limit">
+                        <i class="fas fa-circle-exclamation"></i> {{ user_currency }}{{ overall_budget_summary.total_budget_remaining }} left ({{ overall_budget_summary.overall_budget_pct }}%)
+                    </span>
+                    {% else %}
+                    <span class="stat-trend-badge trend-success" title="Within planned budget">
+                        <i class="fas fa-shield-check"></i> {{ user_currency }}{{ overall_budget_summary.total_budget_remaining }} left ({{ overall_budget_summary.overall_budget_pct }}%)
+                    </span>
+                    {% endif %}
+                </div>
+                {% else %}
+                <h2>No Limit Set</h2>
+                <div class="stat-trend-container">
+                    <a href="{{ url_for('features.budgets_page') }}" class="stat-trend-badge trend-action">
+                        <i class="fas fa-plus"></i> Set Category Limits
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- KPI 3: Transactions & Average Spend -->
+        <div class="stat-card glass card-hover delay-3">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #EC4899, #F43F5E);">
+                <i class="fas fa-receipt"></i>
+            </div>
+            <div class="stat-info">
+                <small>Monthly Activity</small>
+                <h2>{{ transaction_count }} <span style="font-size: 15px; font-weight: 500; color: var(--text-muted);">txns</span></h2>
+                <div class="stat-trend-container">
+                    <span class="stat-trend-badge trend-neutral" title="Average amount spent per transaction">
+                        <i class="fas fa-calculator"></i> Avg: {{ user_currency }}{{ avg_transaction }}/tx
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI 4: Financial Health Score -->
+        <div class="stat-card glass card-hover delay-4">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #3B82F6, #06B6D4);">
+                <i class="fas fa-shield-heart"></i>
+            </div>
+            <div class="stat-info">
+                <small>Financial Health</small>
+                <h2>{{ health_score.score }}<small style="font-size: 14px; font-weight: 500; color: var(--text-muted);">/100</small></h2>
+                <div class="stat-trend-container">
+                    <span class="stat-trend-badge" style="color: {{ health_score.color }}; background: {{ health_score.color }}22; border: 1px solid {{ health_score.color }}44;">
+                        <i class="fas fa-heart-pulse"></i> Grade: {{ health_score.grade }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION B: SPENDING & BUDGET STATUS -->
+    <div class="budget-overview-card glass card-hover animate-fade-up">
+        <div class="card-section-header">
+            <h3><i class="fas fa-bullseye text-warning"></i> Monthly Budget & Spending Caps</h3>
+            <a href="{{ url_for('features.budgets_page') }}" class="btn-text-link">
+                Adjust Limits <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+
+        {% if overall_budget_summary.has_budgets %}
+        <!-- Overall Budget Utilization Meter -->
+        <div class="overall-budget-summary-strip">
+            <div class="overall-budget-labels">
+                <div>
+                    <strong>Total Monthly Limit:</strong>
+                    <span>{{ user_currency }}{{ overall_budget_summary.total_budget }}</span>
+                    <span class="text-muted" style="margin: 0 6px;">•</span>
+                    <strong>Spent:</strong>
+                    <span>{{ user_currency }}{{ overall_budget_summary.total_budget_spent }} ({{ overall_budget_summary.overall_budget_pct }}%)</span>
+                </div>
+                <div>
+                    {% if overall_budget_summary.is_overall_over %}
+                    <span class="budget-status-tag tag-danger"><i class="fas fa-circle-exclamation"></i> Over Budget</span>
+                    {% elif overall_budget_summary.is_overall_warning %}
+                    <span class="budget-status-tag tag-warning"><i class="fas fa-triangle-exclamation"></i> Approaching Limit</span>
+                    {% else %}
+                    <span class="budget-status-tag tag-success"><i class="fas fa-circle-check"></i> On Track</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="overall-budget-track">
+                <div class="progress-fill dynamic-bar {% if overall_budget_summary.is_overall_over %}fill-danger{% elif overall_budget_summary.is_overall_warning %}fill-warning{% else %}fill-success{% endif %}" data-percentage="{{ overall_budget_summary.overall_budget_pct if overall_budget_summary.overall_budget_pct <= 100 else 100 }}"></div>
+            </div>
+        </div>
+
+        <!-- Per-Category Progress Grid -->
+        <div class="budget-bars-grid">
+            {% for b in budget_progress %}
+            <div class="budget-bar-item">
+                <div class="budget-bar-labels">
+                    <span class="budget-cat-title">
+                        {% if b.category == 'Food' %}🍔
+                        {% elif b.category == 'Transport' %}🚗
+                        {% elif b.category == 'Rent' %}🏠
+                        {% elif b.category == 'Entertainment' %}🎮
+                        {% elif b.category == 'Shopping' %}🛍️
+                        {% elif b.category == 'Healthcare' %}💊
+                        {% elif b.category == 'Education' %}📚
+                        {% else %}📦{% endif %}
+                        {{ b.category }}
+                    </span>
+                    <span class="budget-numbers">
+                        <strong>{{ user_currency }}{{ b.spent }}</strong> / {{ user_currency }}{{ b.limit }} ({{ b.raw_percentage }}%)
+                    </span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill dynamic-bar {% if b.is_over %}fill-danger{% elif b.is_warning %}fill-warning{% else %}fill-success{% endif %}" data-percentage="{{ b.percentage }}"></div>
+                </div>
+                <div class="budget-buffer-line">
+                    {% if b.is_over %}
+                    <small class="text-danger"><i class="fas fa-exclamation-circle"></i> Exceeded by {{ user_currency }}{{ -b.remaining }}</small>
+                    {% else %}
+                    <small class="text-muted"><i class="fas fa-circle-check text-success"></i> {{ user_currency }}{{ b.remaining }} buffer remaining</small>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- Empty State for Budgets -->
+        <div class="dashboard-empty-card">
+            <i class="fas fa-bullseye empty-card-icon text-warning"></i>
+            <h4>No Category Budgets Configured</h4>
+            <p>Setting spending limits helps you control expenses, curb impulse purchases, and increases your Financial Health score.</p>
+            <a href="{{ url_for('features.budgets_page') }}" class="btn-primary btn-sm">
+                <i class="fas fa-plus"></i> Set Category Limits
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- SECTION C: SPENDING ANALYTICS -->
+    {% if pie_chart_json or line_chart_json %}
+    <div class="charts-grid">
+        {% if pie_chart_json %}
+        <div class="chart-card glass card-hover animate-fade-up">
+            <div class="chart-header">
+                <div>
+                    <h3><i class="fas fa-chart-pie text-accent"></i> Category Breakdown</h3>
+                    <p class="chart-sub-title">Where your money goes in {{ month_name }}</p>
+                </div>
+                <span class="chart-badge">Active Month</span>
+            </div>
+            <div id="pie-chart" class="chart-container"></div>
+        </div>
+        {% endif %}
+        
+        {% if line_chart_json %}
+        <div class="chart-card glass card-hover animate-fade-up">
+            <div class="chart-header">
+                <div>
+                    <h3><i class="fas fa-arrow-trend-up text-primary"></i> Spending Trajectory</h3>
+                    <p class="chart-sub-title">Monthly expenditure flow & trajectory</p>
+                </div>
+                <span class="chart-badge">Last 6 Months</span>
+            </div>
+            <div id="line-chart" class="chart-container"></div>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <!-- Empty State for Analytics -->
+    <div class="chart-empty-card glass card-hover animate-fade-up">
+        <i class="fas fa-chart-pie chart-empty-icon text-accent"></i>
+        <h4>No Spending Analytics Available Yet</h4>
+        <p>Record your expenses to generate interactive category distribution charts and 6-month spending trajectory models.</p>
+        <a href="{{ url_for('main.add_expense') }}" class="btn-primary btn-sm">
+            <i class="fas fa-plus"></i> Record Your First Expense
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- SECTION D: FINANCIAL HEALTH & VERIFIED AI INSIGHTS -->
+    <div class="dashboard-insights-grid animate-fade-up">
+        <!-- Financial Health Gauge Card -->
         <div class="health-score-card glass card-hover">
             <div class="health-score-header">
-                <h3><i class="fas fa-shield-heart text-success"></i> Financial Health</h3>
+                <h3><i class="fas fa-shield-heart text-success"></i> Financial Health Score</h3>
                 <span class="health-grade-pill" id="healthGradePill" data-color="{{ health_score.color }}">
-                    {{ health_score.grade }}
+                    Grade: {{ health_score.grade }}
                 </span>
             </div>
             <div class="health-gauge-body">
@@ -123,87 +340,74 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Category Budget Progress Section (If user has set budgets) -->
-    {% if budget_progress %}
-    <div class="budget-overview-card glass card-hover animate-fade-up">
-        <div class="card-section-header">
-            <h3><i class="fas fa-bullseye text-warning"></i> Category Budget Limits</h3>
-            <a href="{{ url_for('features.budgets_page') }}" class="btn-text-link">
-                Adjust Limits <i class="fas fa-arrow-right"></i>
-            </a>
-        </div>
-        <div class="budget-bars-grid">
-            {% for b in budget_progress %}
-            <div class="budget-bar-item">
-                <div class="budget-bar-labels">
-                    <span class="budget-cat-title">
-                        {% if b.category == 'Food' %}🍔
-                        {% elif b.category == 'Transport' %}🚗
-                        {% elif b.category == 'Rent' %}🏠
-                        {% elif b.category == 'Entertainment' %}🎮
-                        {% elif b.category == 'Shopping' %}🛍️
-                        {% elif b.category == 'Healthcare' %}💊
-                        {% elif b.category == 'Education' %}📚
-                        {% else %}📦{% endif %}
-                        {{ b.category }}
-                    </span>
-                    <span class="budget-numbers">
-                        <strong>{{ user_currency }}{{ b.spent }}</strong> / {{ user_currency }}{{ b.limit }} ({{ b.raw_percentage }}%)
-                    </span>
-                </div>
-                <div class="progress-track">
-                    <div class="progress-fill dynamic-bar {% if b.is_over %}fill-danger{% elif b.is_warning %}fill-warning{% else %}fill-success{% endif %}" data-percentage="{{ b.percentage }}"></div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Charts Section -->
-    <div class="charts-grid">
-        {% if pie_chart_json %}
-        <div class="chart-card glass card-hover animate-fade-up">
-            <div class="chart-header">
+        <!-- Verified AI Advisor Insights Card -->
+        <div class="ai-insights-card glass card-hover">
+            <div class="ai-insights-header">
                 <div>
-                    <h3><i class="fas fa-chart-pie text-accent"></i> Category Breakdown</h3>
-                    <p class="chart-sub-title">Where your money goes this month</p>
+                    <h3><i class="fas fa-brain text-accent"></i> AI Spending Intelligence</h3>
+                    <p class="ai-insights-subtitle">Data-grounded observations & optimizations</p>
                 </div>
-                <span class="chart-badge">Active Month</span>
+                <span class="chart-badge"><i class="fas fa-sparkles"></i> Verified Advisor</span>
             </div>
-            <div id="pie-chart" class="chart-container"></div>
-        </div>
-        {% endif %}
-        
-        {% if line_chart_json %}
-        <div class="chart-card glass card-hover animate-fade-up">
-            <div class="chart-header">
-                <div>
-                    <h3><i class="fas fa-arrow-trend-up text-primary"></i> Spending Trend</h3>
-                    <p class="chart-sub-title">Monthly expenditure flow & trajectory</p>
-                </div>
-                <span class="chart-badge">Last 6 Months</span>
+
+            <div class="ai-insights-list">
+                {% if smart_insights %}
+                    {% for insight in smart_insights %}
+                    <div class="ai-insight-item">
+                        <div class="ai-insight-top">
+                            {% if insight.priority == 'high' %}
+                            <span class="insight-priority-badge priority-high"><i class="fas fa-bolt"></i> High Priority</span>
+                            {% elif insight.priority == 'medium' %}
+                            <span class="insight-priority-badge priority-medium"><i class="fas fa-lightbulb"></i> Optimization</span>
+                            {% else %}
+                            <span class="insight-priority-badge priority-low"><i class="fas fa-circle-check"></i> Good Habit</span>
+                            {% endif %}
+                        </div>
+                        <div class="ai-insight-fact">{{ insight.fact }}</div>
+                        <div class="ai-insight-rec">
+                            <i class="fas fa-arrow-right-long text-primary"></i> {{ insight.recommendation }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="dashboard-empty-card compact">
+                        <i class="fas fa-wand-magic-sparkles text-accent" style="font-size: 26px; margin-bottom: 8px;"></i>
+                        <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Add more expenses to activate personalized AI spending intelligence and actionable savings recommendations.</p>
+                    </div>
+                {% endif %}
             </div>
-            <div id="line-chart" class="chart-container"></div>
+
+            <div class="ai-insights-footer">
+                <a href="{{ url_for('chatbot.index') }}" class="btn-text-link">
+                    Consult AI Advisor in real-time <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
         </div>
-        {% endif %}
     </div>
 
-    <!-- Recent Transactions Table Card -->
-    <div class="table-card glass card-hover">
+    <!-- SECTION E: RECENT ACTIVITY (TRANSACTIONS) -->
+    <div class="table-card glass card-hover animate-fade-up">
         <div class="table-header">
-            <h3><i class="fas fa-clock-rotate-left"></i> Recent Transactions</h3>
+            <div>
+                <h3><i class="fas fa-clock-rotate-left"></i> Recent Transactions</h3>
+                <p class="table-sub-title">Latest recorded purchases & expenditures</p>
+            </div>
             <div class="table-actions-group">
-                <button class="btn-voice-quick" id="dashboardVoiceBtn" title="Speak to Add Expense (Voice Input)">
+                <button type="button" class="btn-voice-quick" onclick="openVoiceModalDirect()" title="Speak to Add Expense (Voice Input)">
                     <i class="fas fa-microphone"></i> <span>Voice Input</span>
                 </button>
                 <a href="{{ url_for('main.add_expense') }}" class="btn-add">
                     <i class="fas fa-plus"></i> Add Expense
                 </a>
+                {% if expenses %}
+                <a href="{{ url_for('main.export_csv') }}" class="btn-secondary" style="padding: 9px 14px; font-size: 13px;" title="Export all monthly expenses to CSV">
+                    <i class="fas fa-file-csv"></i> CSV
+                </a>
+                {% endif %}
             </div>
         </div>
+
         <div class="table-responsive">
             <table>
                 <thead>
@@ -249,8 +453,19 @@
                     {% else %}
                     <tr>
                         <td colspan="5" class="empty-state">
-                            <i class="fas fa-folder-open"></i>
-                            <p>No expenses found this month. <a href="{{ url_for('main.add_expense') }}">Record your first expense</a></p>
+                            <div class="dashboard-empty-card table-empty-wrap">
+                                <i class="fas fa-folder-open empty-card-icon"></i>
+                                <h4>No Expenses Found for {{ month_name }}</h4>
+                                <p>Start tracking your expenses by typing manually, scanning a paper receipt, or using voice input.</p>
+                                <div class="empty-state-actions">
+                                    <a href="{{ url_for('main.add_expense') }}" class="btn-primary btn-sm">
+                                        <i class="fas fa-plus"></i> Record Expense
+                                    </a>
+                                    <a href="{{ url_for('main.add_expense') }}#receiptDropzone" class="btn-secondary btn-sm">
+                                        <i class="fas fa-camera"></i> Scan Receipt
+                                    </a>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -301,7 +516,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Dynamic progress bar widths
     document.querySelectorAll('.dynamic-bar').forEach(function(bar) {
         const pct = bar.getAttribute('data-percentage') || '0';
-        bar.style.width = pct + '%';
+        bar.style.width = Math.min(100, Math.max(0, parseFloat(pct))) + '%';
     });
 
     // Health Score Circle calculation
@@ -327,10 +542,16 @@ document.addEventListener('DOMContentLoaded', function() {
 {{ pie_chart_json | safe }}
 </script>
 <script>
-    const pieDataNode = document.getElementById('pie-chart-data');
-    if (pieDataNode) {
-        window.pieData = JSON.parse(pieDataNode.textContent);
-        Plotly.newPlot('pie-chart', window.pieData.data, window.pieData.layout, {responsive: true, displayModeBar: false});
+    try {
+        const pieDataNode = document.getElementById('pie-chart-data');
+        if (pieDataNode && pieDataNode.textContent.trim()) {
+            window.pieData = JSON.parse(pieDataNode.textContent);
+            if (window.pieData && window.pieData.data) {
+                Plotly.newPlot('pie-chart', window.pieData.data, window.pieData.layout, {responsive: true, displayModeBar: false});
+            }
+        }
+    } catch (e) {
+        console.warn('Pie chart render warning:', e);
     }
 </script>
 {% endif %}
@@ -340,10 +561,16 @@ document.addEventListener('DOMContentLoaded', function() {
 {{ line_chart_json | safe }}
 </script>
 <script>
-    const lineDataNode = document.getElementById('line-chart-data');
-    if (lineDataNode) {
-        window.lineData = JSON.parse(lineDataNode.textContent);
-        Plotly.newPlot('line-chart', window.lineData.data, window.lineData.layout, {responsive: true, displayModeBar: false});
+    try {
+        const lineDataNode = document.getElementById('line-chart-data');
+        if (lineDataNode && lineDataNode.textContent.trim()) {
+            window.lineData = JSON.parse(lineDataNode.textContent);
+            if (window.lineData && window.lineData.data) {
+                Plotly.newPlot('line-chart', window.lineData.data, window.lineData.layout, {responsive: true, displayModeBar: false});
+            }
+        }
+    } catch (e) {
+        console.warn('Line chart render warning:', e);
     }
 </script>
 {% endif %}
