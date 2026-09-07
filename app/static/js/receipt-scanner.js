@@ -41,12 +41,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    let isScanning = false;
+
     async function handleReceiptUpload(file) {
+        if (isScanning) return;
         if (!file.type.startsWith('image/')) {
             alert('Please select an image file (JPEG or PNG).');
             return;
         }
 
+        isScanning = true;
         const formData = new FormData();
         formData.append('image', file);
 
@@ -96,6 +100,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         amountInput.style.borderColor = '';
                     }, 2000);
                 }
+            } else if (response.status === 429) {
+                const data = await response.json().catch(() => ({}));
+                if (formSubheader) {
+                    const msg = data.message || 'You have made several scan requests quickly. Please wait a moment and try again.';
+                    formSubheader.innerHTML = `⚠️ <strong>${msg}</strong>`;
+                    formSubheader.style.color = 'var(--warning, #f59e0b)';
+                }
             } else {
                 if (formSubheader) {
                     formSubheader.innerHTML = '⚠️ Could not extract receipt details. Please enter manually.';
@@ -109,6 +120,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 formSubheader.style.color = 'var(--danger)';
             }
         } finally {
+            isScanning = false;
             if (dropzone) {
                 dropzone.style.opacity = '1';
                 dropzone.style.pointerEvents = 'auto';

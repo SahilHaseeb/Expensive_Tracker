@@ -13,9 +13,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Auto focus input
     if (userInput) userInput.focus();
 
+    let isSending = false;
+
     // Suggestion chips click
     suggestionChips.forEach(chip => {
         chip.addEventListener('click', function() {
+            if (isSending) return;
             const question = this.getAttribute('data-question');
             if (question) {
                 sendMessage(question);
@@ -26,6 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Clear chat
     if (clearChatBtn) {
         clearChatBtn.addEventListener('click', function() {
+            if (isSending) return;
             chatHistory = [];
             chatMessages.innerHTML = `
                 <div class="chat-message bot-message animate-fade-up">
@@ -42,6 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (chatForm) {
         chatForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            if (isSending) return;
             const text = userInput.value.trim();
             if (text) {
                 sendMessage(text);
@@ -52,13 +57,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Send message function
     async function sendMessage(text) {
+        if (isSending) return;
+        isSending = true;
+
         // Append user message
         appendMessage('user', text);
         chatHistory.push({ sender: 'user', text: text });
 
         // Show typing indicator
         const typingId = showTypingIndicator();
-        sendBtn.disabled = true;
+        if (sendBtn) sendBtn.disabled = true;
+        if (userInput) userInput.disabled = true;
+        suggestionChips.forEach(c => c.style.pointerEvents = 'none');
 
         try {
             const response = await fetch('/api/chatbot/message', {
@@ -72,22 +82,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
             });
 
-            removeTypingIndicator(typingId);
-            sendBtn.disabled = false;
-
             if (response.ok) {
                 const data = await response.json();
                 const botReply = data.reply || "I analyzed your query but have no response.";
                 appendMessage('bot', botReply);
                 chatHistory.push({ sender: 'bot', text: botReply });
+            } else if (response.status === 429) {
+                const data = await response.json().catch(() => ({}));
+                const msg = data.message || data.reply || "You've made several requests quickly. Please wait a moment and try again.";
+                appendMessage('bot', `⚠️ ${msg}`);
             } else {
-                appendMessage('bot', "⚠️ Sorry, there was an issue processing your request. Please try again.");
+                const data = await response.json().catch(() => ({}));
+                const msg = data.reply || data.message || "Sorry, there was an issue processing your request. Please try again.";
+                appendMessage('bot', `⚠️ ${msg}`);
             }
         } catch (error) {
             console.error('Chat error:', error);
-            removeTypingIndicator(typingId);
-            sendBtn.disabled = false;
             appendMessage('bot', "⚠️ Network connection error. Please verify your internet and try again.");
+        } finally {
+            removeTypingIndicator(typingId);
+            isSending = false;
+            if (sendBtn) sendBtn.disabled = false;
+            if (userInput) {
+                userInput.disabled = false;
+                userInput.focus();
+            }
+            suggestionChips.forEach(c => c.style.pointerEvents = 'auto');
         }
     }
 

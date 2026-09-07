@@ -6,6 +6,37 @@ import json
 import urllib.parse
 import difflib
 import logging
+try:
+    from app.api_guard import (
+        shopping_cache,
+        in_flight_deduplicator,
+        execute_with_retry,
+        log_api_event,
+        sanitize_error_message
+    )
+except (ImportError, ModuleNotFoundError):
+    try:
+        from api_guard import (
+            shopping_cache,
+            in_flight_deduplicator,
+            execute_with_retry,
+            log_api_event,
+            sanitize_error_message
+        )
+    except (ImportError, ModuleNotFoundError):
+        import sys
+        import importlib.util
+        _ag_path = os.path.join(os.path.dirname(__file__), "api_guard.py")
+        _ag_spec = importlib.util.spec_from_file_location("api_guard", _ag_path)
+        _ag_mod = importlib.util.module_from_spec(_ag_spec)
+        sys.modules["app.api_guard"] = _ag_mod
+        _ag_spec.loader.exec_module(_ag_mod)
+        shopping_cache = _ag_mod.shopping_cache
+        in_flight_deduplicator = _ag_mod.in_flight_deduplicator
+        execute_with_retry = _ag_mod.execute_with_retry
+        log_api_event = _ag_mod.log_api_event
+        sanitize_error_message = _ag_mod.sanitize_error_message
+
 
 logger = logging.getLogger(__name__)
 
@@ -937,79 +968,122 @@ def extract_item_image(item):
 
 
 def _fetch_serpapi_shopping(query, num=60):
-    """Call SerpAPI Google Shopping to get REAL live product results with their exact images"""
+    """Call SerpAPI Google Shopping with caching, deduplication, retry, and timeout protection"""
     api_key = Config.SERPAPI_API_KEY
     if not api_key:
         logger.error("SerpAPI search attempted without configured API key.")
         raise ShoppingAPIError("SerpAPI API key is missing or not configured")
 
     clean_q = clean_store_search_query(query)
-    params = {
-        "engine": "google_shopping",
-        "q": clean_q,
-        "api_key": api_key,
-        "num": num,
-        "hl": "en",
-    }
-    try:
-        resp = requests.get(SERPAPI_URL, params=params, timeout=12)
-    except requests.exceptions.Timeout as e:
-        logger.warning(f"SerpAPI request timed out for query '{clean_q}'.")
-        raise ShoppingTimeoutError(f"SerpAPI request timed out: {e}")
-    except (requests.exceptions.ConnectionError, requests.exceptions.RequestException) as e:
-        logger.warning(f"SerpAPI network error for query '{clean_q}'.")
-        raise ShoppingNetworkError(f"SerpAPI connection error: {e}")
+    cache_key = f"serpapi:{clean_q.lower()}:{num}"
 
-    # Inspect HTTP status code
-    if resp.status_code == 429:
-        logger.warning(f"SerpAPI HTTP 429 rate limit reached for query '{clean_q}'.")
-        raise ShoppingRateLimitError("SerpAPI rate limit or monthly quota reached (HTTP 429)")
-    elif resp.status_code in (401, 403):
-        logger.error(f"SerpAPI authentication error (HTTP {resp.status_code}).")
-        raise ShoppingAPIError(f"SerpAPI authentication failed (HTTP {resp.status_code})")
-    elif resp.status_code >= 500:
-        logger.error(f"SerpAPI upstream server error (HTTP {resp.status_code}).")
-        raise ShoppingAPIError(f"SerpAPI upstream server error (HTTP {resp.status_code})")
-    elif resp.status_code != 200:
-        logger.error(f"SerpAPI error (HTTP {resp.status_code}).")
-        raise ShoppingAPIError(f"SerpAPI returned HTTP {resp.status_code}")
+    # 1. Short-lived TTL cache check (5-minute TTL)
+    cached = shopping_cache.get(cache_key)
+    if cached is not None:
+        log_api_event("SerpAPI", f"google_shopping?q={clean_q}", "SUCCESS", error="Served from short-lived cache")
+        return list(cached)
 
-    try:
-        data = resp.json()
-    except Exception as e:
-        logger.error(f"Failed to parse SerpAPI JSON response: {e}")
-        raise ShoppingMalformedResponseError(f"Invalid JSON in SerpAPI response: {e}")
+    # 2. Execute with in-flight deduplication (prevents duplicate simultaneous calls)
+    def _do_fetch():
+        # Double check cache inside deduplicator lock
+        cached_inner = shopping_cache.get(cache_key)
+        if cached_inner is not None:
+            return list(cached_inner)
 
-    if not isinstance(data, dict):
-        logger.error(f"SerpAPI returned non-dict response type: {type(data)}")
-        raise ShoppingMalformedResponseError(f"Expected dict response from SerpAPI, got {type(data).__name__}")
+        timeout_sec = getattr(Config, 'SERPAPI_TIMEOUT', 12)
+        params = {
+            "engine": "google_shopping",
+            "q": clean_q,
+            "api_key": api_key,
+            "num": num,
+            "hl": "en",
+        }
 
-    # Check for error payload from SerpAPI
-    if "error" in data:
-        err_msg = str(data.get("error") or "").lower()
-        logger.warning(f"SerpAPI returned error message: {data.get('error')}")
-        if any(term in err_msg for term in ["rate limit", "quota", "monthly search limit", "exhausted", "too many requests", "run out of searches", "has reached"]):
-            raise ShoppingRateLimitError("API rate limit or monthly search quota exhausted")
-        raise ShoppingAPIError("SerpAPI returned an error")
+        def _network_call():
+            try:
+                return requests.get(SERPAPI_URL, params=params, timeout=timeout_sec)
+            except requests.exceptions.Timeout as e:
+                raise ShoppingTimeoutError(f"SerpAPI request timed out: {e}")
+            except (requests.exceptions.ConnectionError, requests.exceptions.RequestException) as e:
+                raise ShoppingNetworkError(f"SerpAPI connection error: {e}")
 
-    if isinstance(data.get("search_metadata"), dict) and data["search_metadata"].get("status") == "Error":
-        logger.error("SerpAPI search_metadata status is Error.")
-        raise ShoppingAPIError("SerpAPI search metadata reported an error")
+        # Controlled retry: retry max 2 times on transient network error / timeout
+        try:
+            resp = execute_with_retry(
+                _network_call,
+                max_retries=2,
+                base_delay=0.5,
+                backoff_factor=2.0,
+                retryable_exceptions=(ShoppingTimeoutError, ShoppingNetworkError),
+                service_name="SerpAPI",
+                endpoint=f"google_shopping?q={clean_q}"
+            )
+        except ShoppingTimeoutError:
+            logger.warning(f"SerpAPI request timed out for query '{clean_q}'.")
+            raise
+        except ShoppingNetworkError:
+            logger.warning(f"SerpAPI network error for query '{clean_q}'.")
+            raise
+        except Exception as e:
+            logger.error(f"SerpAPI request failed for query '{clean_q}': {e}")
+            raise ShoppingAPIError(f"SerpAPI request failed: {e}")
 
-    # Extract shopping results safely
-    results = data.get("shopping_results")
-    if results is None:
-        results = data.get("inline_shopping_results")
+        # Inspect HTTP status code
+        if resp.status_code == 429:
+            logger.warning(f"SerpAPI HTTP 429 rate limit reached for query '{clean_q}'.")
+            raise ShoppingRateLimitError("SerpAPI rate limit or monthly quota reached (HTTP 429)")
+        elif resp.status_code in (401, 403):
+            logger.error(f"SerpAPI authentication error (HTTP {resp.status_code}).")
+            raise ShoppingAPIError(f"SerpAPI authentication failed (HTTP {resp.status_code})")
+        elif resp.status_code >= 500:
+            logger.error(f"SerpAPI upstream server error (HTTP {resp.status_code}).")
+            raise ShoppingAPIError(f"SerpAPI upstream server error (HTTP {resp.status_code})")
+        elif resp.status_code != 200:
+            logger.error(f"SerpAPI error (HTTP {resp.status_code}).")
+            raise ShoppingAPIError(f"SerpAPI returned HTTP {resp.status_code}")
 
-    if results is None:
-        # Search executed cleanly, but no shopping results found
-        return []
+        try:
+            data = resp.json()
+        except Exception as e:
+            logger.error(f"Failed to parse SerpAPI JSON response: {e}")
+            raise ShoppingMalformedResponseError(f"Invalid JSON in SerpAPI response: {e}")
 
-    if not isinstance(results, list):
-        logger.error(f"Expected shopping_results to be a list, got {type(results).__name__}")
-        raise ShoppingMalformedResponseError(f"Expected shopping_results to be a list, got {type(results).__name__}")
+        if not isinstance(data, dict):
+            logger.error(f"SerpAPI returned non-dict response type: {type(data)}")
+            raise ShoppingMalformedResponseError(f"Expected dict response from SerpAPI, got {type(data).__name__}")
 
-    return results[:num]
+        # Check for error payload from SerpAPI
+        if "error" in data:
+            err_msg = str(data.get("error") or "").lower()
+            logger.warning(f"SerpAPI returned error message: {data.get('error')}")
+            if any(term in err_msg for term in ["rate limit", "quota", "monthly search limit", "exhausted", "too many requests", "run out of searches", "has reached"]):
+                raise ShoppingRateLimitError("API rate limit or monthly search quota exhausted")
+            raise ShoppingAPIError("SerpAPI returned an error")
+
+        if isinstance(data.get("search_metadata"), dict) and data["search_metadata"].get("status") == "Error":
+            logger.error("SerpAPI search_metadata status is Error.")
+            raise ShoppingAPIError("SerpAPI search metadata reported an error")
+
+        # Extract shopping results safely
+        results = data.get("shopping_results")
+        if results is None:
+            results = data.get("inline_shopping_results")
+
+        if results is None:
+            # Search executed cleanly, but no shopping results found
+            shopping_cache.set(cache_key, [], ttl_seconds=300)
+            return []
+
+        if not isinstance(results, list):
+            logger.error(f"Expected shopping_results to be a list, got {type(results).__name__}")
+            raise ShoppingMalformedResponseError(f"Expected shopping_results to be a list, got {type(results).__name__}")
+
+        trimmed = results[:num]
+        shopping_cache.set(cache_key, trimmed, ttl_seconds=300)
+        return trimmed
+
+    return in_flight_deduplicator.execute_deduped(cache_key, _do_fetch)
+
 
 
 def _process_serpapi_results(serpapi_results, query, target_curr="Rs."):

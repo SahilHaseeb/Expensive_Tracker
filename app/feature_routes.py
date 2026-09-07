@@ -7,13 +7,19 @@ from app.analytics import calculate_financial_health_score
 from app.db_sync import save_db_backup
 from datetime import datetime, date, timedelta
 import re
+import logging
 import pandas as pd
+from config import Config
+from app.api_guard import rate_limited, sanitize_error_message, log_api_event
+
+logger = logging.getLogger(__name__)
 
 features_bp = Blueprint('features', __name__)
 
 # ========== 1. RECEIPT SCANNER API ==========
 @features_bp.route('/api/scan-receipt', methods=['POST'])
 @login_required
+@rate_limited(limit=Config.RATE_LIMIT_OCR, window=60, action='scan_receipt', is_json=True)
 def api_scan_receipt():
     """Upload receipt image and return extracted expense details"""
     if 'image' not in request.files:
@@ -29,7 +35,12 @@ def api_scan_receipt():
         result = scan_receipt_image(image_bytes, mime_type=mime_type)
         return jsonify(result)
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        safe_err = sanitize_error_message(e)
+        logger.error(f"Receipt scan route error: {safe_err}", exc_info=True)
+        return jsonify({
+            "status": "error",
+            "message": "Unable to extract receipt details. Please enter manually."
+        }), 500
 
 
 # ========== 2. VOICE TO EXPENSE NLP PARSER ==========
@@ -81,6 +92,7 @@ def api_parse_voice():
 
 @features_bp.route('/api/transcribe-voice-audio', methods=['POST'])
 @login_required
+@rate_limited(limit=Config.RATE_LIMIT_VOICE, window=60, action='voice_transcribe', is_json=True)
 def api_transcribe_voice_audio():
     """Transcribe and parse raw audio file from Firefox/MediaRecorder"""
     if 'audio' not in request.files:
@@ -110,14 +122,20 @@ def api_transcribe_voice_audio():
                 "transcript": "Spent 1500 on dinner with friends"
             }
             """
-            response = model.generate_content([
-                {"mime_type": mime_type, "data": audio_bytes},
-                prompt
-            ])
-            text = response.text.strip()
+            timeout_sec = getattr(Config, 'GEMINI_TIMEOUT', 15)
+            try:
+                response = model.generate_content(
+                    [{"mime_type": mime_type, "data": audio_bytes}, prompt],
+                    request_options={"timeout": timeout_sec}
+                )
+            except TypeError:
+                response = model.generate_content([{"mime_type": mime_type, "data": audio_bytes}, prompt])
+
+            text = response.text.strip() if response and hasattr(response, 'text') else ""
             match = re.search(r"\{.*\}", text, re.DOTALL)
             if match:
                 res = json.loads(match.group(0))
+                log_api_event("Gemini Audio", "api_transcribe_voice_audio", "SUCCESS")
                 return jsonify({
                     "status": "success",
                     "amount": float(res.get("amount", 0.0)),
@@ -127,7 +145,8 @@ def api_transcribe_voice_audio():
                     "transcript": res.get("transcript", "")
                 })
     except Exception as e:
-        print(f"Gemini audio transcription error: {e}")
+        safe_err = sanitize_error_message(e)
+        log_api_event("Gemini Audio", "api_transcribe_voice_audio", "FAILED", error=safe_err)
 
     return jsonify({
         "status": "success",

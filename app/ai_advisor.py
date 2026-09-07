@@ -6,6 +6,29 @@ from app.models import Expense, Budget, Subscription, User
 from app.analytics import calculate_financial_health_score
 
 try:
+    from app.api_guard import (
+        execute_with_retry,
+        log_api_event,
+        sanitize_error_message
+    )
+except (ImportError, ModuleNotFoundError):
+    try:
+        from api_guard import (
+            execute_with_retry,
+            log_api_event,
+            sanitize_error_message
+        )
+    except (ImportError, ModuleNotFoundError):
+        import importlib.util
+        _ag_path = os.path.join(os.path.dirname(__file__), "api_guard.py")
+        _ag_spec = importlib.util.spec_from_file_location("api_guard", _ag_path)
+        _ag_mod = importlib.util.module_from_spec(_ag_spec)
+        _ag_spec.loader.exec_module(_ag_mod)
+        execute_with_retry = _ag_mod.execute_with_retry
+        log_api_event = _ag_mod.log_api_event
+        sanitize_error_message = _ag_mod.sanitize_error_message
+
+try:
     import google.generativeai as genai
     GENAI_AVAILABLE = True
 except ImportError:
@@ -808,16 +831,39 @@ CRITICAL INSTRUCTIONS FOR DATA-GROUNDED "WHY?" EXPLANATIONS:
 
         contents.append({"role": "user", "parts": [structured_user_prompt]})
 
-        response = model.generate_content(contents)
+        timeout_sec = getattr(Config, 'GEMINI_TIMEOUT', 15)
+
+        def _call_gemini():
+            try:
+                return model.generate_content(
+                    contents,
+                    request_options={"timeout": timeout_sec}
+                )
+            except TypeError:
+                # If SDK version doesn't accept request_options
+                return model.generate_content(contents)
+
+        # Retry once on transient network/service error with backoff
+        response = execute_with_retry(
+            _call_gemini,
+            max_retries=1,
+            base_delay=0.8,
+            backoff_factor=1.5,
+            service_name="Gemini AI",
+            endpoint="generate_content"
+        )
+
         if response and response.text:
             return response.text
         else:
             return get_smart_fallback_response(user_message, financial_data, username)
 
     except Exception as e:
-        error_msg = str(e)
+        safe_err = sanitize_error_message(e)
+        log_api_event("Gemini AI", "generate_ai_response", "FAILED", error=safe_err)
         fallback = get_smart_fallback_response(user_message, financial_data, username)
         return fallback
+
 
 
 def get_smart_fallback_response(user_message, financial_data, username):

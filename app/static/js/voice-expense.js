@@ -193,8 +193,13 @@ function stopVoiceRecording() {
     if (pulse) pulse.classList.remove('pulse-active');
 }
 
+let isTranscribingVoice = false;
+
 // Send Firefox MediaRecorder Audio to Backend Gemini Engine
 async function sendAudioBlobForTranscription(audioBlob) {
+    if (isTranscribingVoice) return;
+    isTranscribingVoice = true;
+
     const status = document.getElementById('voiceStatus');
     const transcript = document.getElementById('voiceTranscript');
     if (status) status.innerHTML = '<i class="fas fa-spinner fa-spin text-primary"></i> Transcribing voice with AI...';
@@ -215,12 +220,17 @@ async function sendAudioBlobForTranscription(audioBlob) {
                 transcript.innerText = `"${data.transcript}"`;
             }
             applyExtractedExpense(data);
+        } else if (response.status === 429) {
+            const data = await response.json().catch(() => ({}));
+            if (status) status.innerText = `⚠️ ${data.message || "You've made several voice requests quickly. Please wait a moment."}`;
         } else {
             if (status) status.innerText = '⚠️ Could not parse audio. Please try again or type below.';
         }
     } catch (e) {
         console.error('Audio upload error:', e);
         if (status) status.innerText = '⚠️ Network error processing audio.';
+    } finally {
+        isTranscribingVoice = false;
     }
 }
 

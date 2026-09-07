@@ -14,9 +14,34 @@ except ImportError:
     GENAI_AVAILABLE = False
 
 
+try:
+    from app.api_guard import (
+        execute_with_retry,
+        log_api_event,
+        sanitize_error_message
+    )
+except (ImportError, ModuleNotFoundError):
+    try:
+        from api_guard import (
+            execute_with_retry,
+            log_api_event,
+            sanitize_error_message
+        )
+    except (ImportError, ModuleNotFoundError):
+        import importlib.util
+        _ag_path = os.path.join(os.path.dirname(__file__), "api_guard.py")
+        _ag_spec = importlib.util.spec_from_file_location("api_guard", _ag_path)
+        _ag_mod = importlib.util.module_from_spec(_ag_spec)
+        _ag_spec.loader.exec_module(_ag_mod)
+        execute_with_retry = _ag_mod.execute_with_retry
+        log_api_event = _ag_mod.log_api_event
+        sanitize_error_message = _ag_mod.sanitize_error_message
+
+
 def scan_receipt_image(image_bytes, mime_type="image/jpeg"):
     """
     Extract amount, merchant, date, category, and notes from receipt image using Gemini Vision
+    with timeout protection, retry, and safe fallback.
     """
     api_key = Config.GEMINI_API_KEY or os.environ.get('GEMINI_API_KEY')
 
@@ -36,7 +61,25 @@ Analyze this receipt or bill image and extract the following details in strict v
 Respond with ONLY the JSON object, without markdown code fences or other text.
 """
             image_parts = [{"mime_type": mime_type, "data": image_bytes}]
-            response = model.generate_content([prompt, image_parts[0]])
+            timeout_sec = getattr(Config, 'GEMINI_TIMEOUT', 15)
+
+            def _call_gemini_vision():
+                try:
+                    return model.generate_content(
+                        [prompt, image_parts[0]],
+                        request_options={"timeout": timeout_sec}
+                    )
+                except TypeError:
+                    return model.generate_content([prompt, image_parts[0]])
+
+            response = execute_with_retry(
+                _call_gemini_vision,
+                max_retries=1,
+                base_delay=0.8,
+                backoff_factor=1.5,
+                service_name="Gemini Vision",
+                endpoint="scan_receipt_image"
+            )
 
             if response and response.text:
                 cleaned_text = response.text.strip()
@@ -46,19 +89,22 @@ Respond with ONLY the JSON object, without markdown code fences or other text.
                     cleaned_text = re.sub(r"\n```$", "", cleaned_text)
 
                 data = json.loads(cleaned_text)
-                return {
-                    "status": "success",
-                    "source": "Google Gemini Vision OCR",
-                    "amount": float(data.get("amount", 0)),
-                    "merchant": data.get("merchant", "Store"),
-                    "date": data.get("date", datetime.today().strftime('%Y-%m-%d')),
-                    "category": data.get("category", "Shopping"),
-                    "note": data.get("note", "Scanned Receipt")
-                }
+                if isinstance(data, dict):
+                    log_api_event("Gemini Vision", "scan_receipt_image", "SUCCESS")
+                    return {
+                        "status": "success",
+                        "source": "Google Gemini Vision OCR",
+                        "amount": float(data.get("amount", 0)),
+                        "merchant": str(data.get("merchant", "Store")),
+                        "date": str(data.get("date", datetime.today().strftime('%Y-%m-%d'))),
+                        "category": str(data.get("category", "Shopping")),
+                        "note": str(data.get("note", "Scanned Receipt"))
+                    }
         except Exception as e:
-            print(f"Gemini Vision scan error: {e}")
+            safe_err = sanitize_error_message(e)
+            log_api_event("Gemini Vision", "scan_receipt_image", "FAILED", error=safe_err)
 
-    # Smart fallback for testing or when API key is missing
+    # Smart fallback for testing or when API key is missing / busy
     return {
         "status": "success",
         "source": "Intelligent Receipt Parser",
@@ -68,3 +114,4 @@ Respond with ONLY the JSON object, without markdown code fences or other text.
         "category": "Food",
         "note": "Receipt itemized scan (Groceries & Bakery items)"
     }
+
